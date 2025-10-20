@@ -8,8 +8,8 @@
 
 [cite_start]The model uses a multi-task, multi-output MLP architecture designed to learn generalized health patterns from a complete patient feature vector[cite: 6].
 
-* [cite_start]**Shared Body**: A series of dense layers that processes the input features to learn a compressed, holistic representation of a patient's overall health status[cite: 7, 8].
-* [cite_start]**Task-Specific Heads**: Four independent sets of dense layers that branch off from the shared body[cite: 9]. [cite_start]Each head is a specialist, mapping the shared health representation to a specific clinical target[cite: 10].
+* **Shared Body**: A series of dense layers that processes the input features to learn a compressed, holistic representation of a patient's overall health status.
+* **Task-Specific Heads**: Four independent sets of dense layers that branch off from the shared body. Each head is a specialist, mapping the shared health representation to a specific clinical target.
 
 
 
@@ -17,37 +17,37 @@
 
 ## 🎯 Prediction Tasks & Heads
 
-[cite_start]The model is trained on four specific clinical tasks, each with its own dedicated head[cite: 9].
+The model is trained on four specific clinical tasks, each with its own dedicated head.
 
 ### 1. Cardiovascular Head ❤️
-* [cite_start]**Goal**: Classify patients based on a prior diagnosis of major cardiovascular disease (CVD)[cite: 14].
-* [cite_start]**Task Type**: Binary Classification[cite: 16].
-* [cite_start]**Target Variable**: A binary label derived from NHANES questionnaire data indicating a history of congestive heart failure, coronary heart disease, angina, a heart attack, or a stroke[cite: 15].
-* [cite_start]**Output**: A single logit representing the probability of a positive CVD history[cite: 17].
+* **Goal**: Classify patients based on a prior diagnosis of major cardiovascular disease (CVD).
+* **Task Type**: Binary Classification.
+* **Target Variable**: A binary label derived from NHANES questionnaire data indicating a history of congestive heart failure, coronary heart disease, angina, a heart attack, or a stroke.
+* **Output**: A single logit representing the probability of a positive CVD history.
 
 ### 2. Metabolic Head 🧬
-* [cite_start]**Goal**: Identify which specific components of metabolic syndrome are present in a patient[cite: 21].
-* [cite_start]**Task Type**: Multi-Label Classification[cite: 23].
-* [cite_start]**Target Variable**: Five independent binary labels for each of the NCEP-ATP III criteria (abdominal obesity, high triglycerides, low HDL cholesterol, high blood pressure, high fasting glucose)[cite: 22].
-* [cite_start]**Output**: A vector of 5 logits, where each logit represents the probability that the patient meets a specific criterion[cite: 24].
+* **Goal**: Identify which specific components of metabolic syndrome are present in a patient.
+* **Task Type**: Multi-Label Classification.
+* **Target Variable**: Five independent binary labels for each of the NCEP-ATP III criteria (abdominal obesity, high triglycerides, low HDL cholesterol, high blood pressure, high fasting glucose).
+* **Output**: A vector of 5 logits, where each logit represents the probability that the patient meets a specific criterion.
 
 ### 3. Kidney Head երի
-* [cite_start]**Goal**: Estimate the degree of kidney damage by predicting a key biomarker[cite: 28].
-* [cite_start]**Task Type**: Regression[cite: 31].
-* [cite_start]**Target Variable**: The Urine Albumin-to-Creatinine Ratio (UACR), a primary indicator of kidney damage, which is log-transformed to stabilize variance[cite: 29, 30].
-* [cite_start]**Output**: A single continuous value predicting log(UACR)[cite: 32].
+* **Goal**: Estimate the degree of kidney damage by predicting a key biomarker.
+* **Task Type**: Regression.
+* **Target Variable**: The Urine Albumin-to-Creatinine Ratio (UACR), a primary indicator of kidney damage, which is log-transformed to stabilize variance.
+* **Output**: A single continuous value predicting log(UACR).
 
 ### 4. Liver Head 🧪
-* [cite_start]**Goal**: Estimate the level of liver inflammation by predicting a key liver enzyme[cite: 36].
-* [cite_start]**Task Type**: Regression[cite: 39].
-* [cite_start]**Target Variable**: The blood level of Alanine Aminotransferase (ALT), a standard biomarker for liver cell injury, which is log-transformed[cite: 37, 38].
-* [cite_start]**Output**: A single continuous value predicting log(ALT)[cite: 40].
+* **Goal**: Estimate the level of liver inflammation by predicting a key liver enzyme.
+* **Task Type**: Regression.
+* **Target Variable**: The blood level of Alanine Aminotransferase (ALT), a standard biomarker for liver cell injury, which is log-transformed.
+* **Output**: A single continuous value predicting log(ALT).
 
 ---
 
 ## 📊 Dataset
 
-[cite_start]The model is trained on data from the **National Health and Nutrition Examination Survey (NHANES)**, specifically using the 2013-2023 cycles[cite: 11].
+The model is trained on data from the **National Health and Nutrition Examination Survey (NHANES)**, specifically using the 2013-2023 cycles.
 
 ---
 
