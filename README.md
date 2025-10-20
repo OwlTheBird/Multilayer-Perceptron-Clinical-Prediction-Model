@@ -1,12 +1,12 @@
 # Multi-Task Clinical Prediction Model
 
-[cite_start]This project implements a multi-task deep learning model to simultaneously predict clinical outcomes across four distinct health domains: cardiovascular, metabolic, kidney, and liver health[cite: 3]. [cite_start]It uses a unified Multilayer Perceptron (MLP) architecture trained on the National Health and Nutrition Examination Survey (NHANES) dataset[cite: 6, 11]. [cite_start]The goal is to create a single, efficient model that learns a holistic representation of a patient's health to predict multiple outcomes at once[cite: 3, 4].
+This project implements a multi-task deep learning model to simultaneously predict clinical outcomes across four distinct health domains: cardiovascular, metabolic, kidney, and liver health. It uses a unified Multilayer Perceptron (MLP) architecture trained on the National Health and Nutrition Examination Survey (NHANES) dataset. The goal is to create a single, efficient model that learns a holistic representation of a patient's health to predict multiple outcomes at once.
 
 ---
 
 ## 🏗️ Model Architecture
 
-[cite_start]The model uses a multi-task, multi-output MLP architecture designed to learn generalized health patterns from a complete patient feature vector[cite: 6].
+The model uses a multi-task, multi-output MLP architecture designed to learn generalized health patterns from a complete patient feature vector.
 
 * **Shared Body**: A series of dense layers that processes the input features to learn a compressed, holistic representation of a patient's overall health status.
 * **Task-Specific Heads**: Four independent sets of dense layers that branch off from the shared body. Each head is a specialist, mapping the shared health representation to a specific clinical target.
