@@ -81,7 +81,7 @@ try:
     
     # Save combined dataset
     df_combined.to_csv('master_dataset_all_cycles.csv', index=False)
-    df_combined.to_parquet('master_dataset_all_cycles.parquet', index=False)
+    
     print(f"\n  ✓ Combined dataset saved (CSV and Parquet)")
     
 except Exception as e:
@@ -177,47 +177,7 @@ print("OPTION 4: Custom Category Combinations Across All Cycles")
 print("=" * 80)
 
 # Example: Demographics + Laboratory + Examination only (no questionnaire)
-print("\nCollecting Demographics + Laboratory + Examination across all cycles...")
-
-custom_data_all_cycles = []
-
-for cycle in cycles:
-    print(f"\n  Processing {cycle}...")
-    try:
-        loaded_data = pipeline.load_cycle_data(cycle)
-        
-        # Start with demographics
-        base_df = loaded_data['demographics'][0].copy()
-        base_df['Cycle'] = cycle
-        
-        # Merge demographics files if multiple
-        if len(loaded_data['demographics']) > 1:
-            base_df = pipeline.merge_dataframes(base_df, loaded_data['demographics'][1:])
-        
-        # Merge laboratory
-        if loaded_data['laboratory']:
-            base_df = pipeline.merge_dataframes(base_df, loaded_data['laboratory'])
-        
-        # Merge examination
-        if loaded_data['examination']:
-            base_df = pipeline.merge_dataframes(base_df, loaded_data['examination'])
-        
-        custom_data_all_cycles.append(base_df)
-        print(f"    ✓ {cycle}: {len(base_df)} rows, {len(base_df.columns)} columns")
-        
-    except Exception as e:
-        print(f"    ✗ Error: {str(e)}")
-
-# Combine all custom data
-if custom_data_all_cycles:
-    df_custom_combined = pd.concat(custom_data_all_cycles, axis=0, ignore_index=True)
-    print(f"\n✓ Combined Custom Dataset (Demo + Lab + Exam):")
-    print(f"  - Total rows: {len(df_custom_combined)}")
-    print(f"  - Total columns: {len(df_custom_combined.columns)}")
-    print(f"  - Unique participants: {df_custom_combined['SEQN'].nunique()}")
-    
-    df_custom_combined.to_csv('custom_data_all_cycles.csv', index=False)
-    print(f"  ✓ Saved to: custom_data_all_cycles.csv")
+print("\nSkipping custom data combination as requested")
 
 
 # =============================================================================
@@ -253,7 +213,6 @@ print("  - Individual cycle datasets: master_dataset_[cycle].csv")
 print("  - Combined all cycles: master_dataset_all_cycles.csv")
 print("  - Examination only: examination_data_all_cycles.csv")
 print("  - Laboratory only: laboratory_data_all_cycles.csv")
-print("  - Custom combination: custom_data_all_cycles.csv")
 
 # Quick verification
 print("\n" + "=" * 80)
