@@ -315,17 +315,41 @@ class NHANESDataPipeline:
         """
         
         # Define the 9 essential columns (8 predictors + 1 raw target)
-        COLUMNS_TO_KEEP = [
-            'SEQN', 'Cycle', 'RIAGENDR', 'RIDAGEYR', 'BMXBMI', 
-            'BPXSY1', 'LBXGLU', 'LBXSCH', 'URDACT'
-        ]
+        base_columns = ['SEQN', 'Cycle', 'RIAGENDR', 'RIDAGEYR', 'BMXBMI', 'BPXSY1', 'LBXGLU', 'LBXSCH']
         
-        # 1. Feature Selection (Discarding over 500 columns)
-        df_clean = df[COLUMNS_TO_KEEP].copy()
+        # 1. Check for available UACR-related columns
+        uracr_columns = {
+            'URDACT': 'Direct UACR',
+            'URXUMA': 'Urine albumin (mg/L)',
+            'URXUCR': 'Urine creatinine (mg/dL)'
+        }
         
-        # 2. Target Calculation
-        df_clean['Log_UACR'] = np.log(df_clean['URDACT'])
-        df_clean = df_clean.drop(columns=['URDACT'])
+        available_columns = {col: col in df.columns for col in uracr_columns}
+        
+        # 2. Feature Selection
+        df_clean = df[base_columns].copy()
+        
+        # 3. Target Calculation - Try different methods to get Log_UACR
+        if available_columns['URDACT']:
+            # Method 1: Use URDACT directly if available
+            df_clean['Log_UACR'] = np.log(df['URDACT'] + 1)  # Add 1 to avoid log(0)
+            logger.info("Calculated Log_UACR from URDACT column")
+            
+        elif all(available_columns[col] for col in ['URXUMA', 'URXUCR']):
+            # Method 2: Calculate UACR from URXUMA and URXUCR if available
+            df_clean['UACR'] = (df['URXUMA'] / df['URXUCR']) * 100  # Convert to mg/g
+            df_clean['Log_UACR'] = np.log(df_clean['UACR'] + 1)
+            logger.info("Calculated Log_UACR from URXUMA/URXUCR columns")
+            
+            # Add the calculated UACR to the columns to keep for imputation
+            base_columns.append('UACR')
+        else:
+            # Method 3: If no UACR data is available, log a warning and set to NaN
+            logger.warning("No UACR data available. Setting Log_UACR to NaN.")
+            df_clean['Log_UACR'] = np.nan
+            
+        # 4. Drop any temporary columns we don't need anymore
+        df_clean = df_clean.drop(columns=[col for col in ['UACR'] if col in df_clean.columns])
         
         continuous_cols = ['BMXBMI', 'BPXSY1', 'LBXGLU', 'LBXSCH', 'Log_UACR']
         
