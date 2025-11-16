@@ -1,4 +1,4 @@
-# Multi-Task Clinical Prediction Model
+# Multi-Task Clinical Prediction Model (On-Going project)
 
 This project implements a multi-task deep learning model to simultaneously predict clinical outcomes across four distinct health domains: cardiovascular, metabolic, kidney, and liver health. It uses a unified Multilayer Perceptron (MLP) architecture trained on the National Health and Nutrition Examination Survey (NHANES) dataset. The goal is to create a single, efficient model that learns a holistic representation of a patient's health to predict multiple outcomes at once.
 
