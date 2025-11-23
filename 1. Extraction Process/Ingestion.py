@@ -1,4 +1,3 @@
-from bokeh.core.property.primitive import Null
 import pandas as pd
 import os
 import glob # help us extract files path instead of doing it manually
@@ -18,13 +17,14 @@ conn = sqlite3.connect(DB_NAME)
 
 FEATURES_TO_KEEP_DEMO = ['SEQN', 'RIAGENDR', 'RIDAGEYR', 'RIDRETH3', 'INDFMPIR']
 FEATURES_TO_KEEP_BMS = ['SEQN', 'BMXBMI', 'BMXHT', 'BMXWAIST']
-FEATURES_TO_KEEP_VITALS = ['SEQN', 'BPXPLS', 'BPXOPLS'] #BPXOPLS is Oscillometric Measurements, while BPXPLS is done using manual device
-
+#FEATURES_TO_KEEP_VITALS = ['SEQN', 'BPXPLS', 'BPXOPLS'] #BPXOPLS is Oscillometric Measurements, while BPXPLS is done using manual device
+FEATURES_TO_KEEP_CBC = ['SEQN', 'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI']
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 FOLDER_PATH_DEMO = os.path.join(script_dir, "Raw Data", "Demo_data", "*.xpt")
 FOLDER_PATH_BMS = os.path.join(script_dir, "Raw Data", "bodyMeasures_data", "*.xpt")
 FOLDER_PATH_VITALS = os.path.join(script_dir, "Raw Data", "BloodPressure_data", "*.xpt")
+FOLDER_PATH_CBC = os.path.join(script_dir, "Raw Data", "BloodCount_data", "*.xpt")
 
 def cycle_checker(df: pd.DataFrame, filename: str) -> pd.DataFrame:
         found_cycle = False
@@ -57,7 +57,6 @@ def raw_Demographics(folder_Path: str, Feature_Names: list[str]) -> None:
         df.to_sql('Demographics', conn, if_exists='append', index=False)
     conn.close()
     print("Finished Ingestion of Demographics data and DB Connection is closed")
-
 #raw_Demographics(FOLDER_PATH_DEMO, FEATURES_TO_KEEP_DEMO) DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
 
 def raw_bodyMeasures(folder_Path: str, Feature_Names: list[str]) -> None:
@@ -130,7 +129,7 @@ def raw_Vitals(folder_Path: str) -> None:
         final_cols = ['SEQN', 'Cycle', 'Is_Oscillometric', 'Pulse'] + MANUAL_SY + MANUAL_DI
         
         df_final = df[final_cols].copy()
-        
+
         rename_dict = {}
         for col in MANUAL_SY + MANUAL_DI:
             rename_dict[col] = f"{col} (target)"
@@ -143,4 +142,23 @@ def raw_Vitals(folder_Path: str) -> None:
 
     conn.close()
     print("\nFinished Ingestion for Vitals. DB Connection closed.")
-raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+#raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+
+def raw_CBC(folder_Path: str, Feature_Names: list[str]) -> None:
+
+    files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
+    print(f' We have: {len(files_list)} Files in CBC {folder_Path}\n') #this will return the number of files that are in demo folder
+
+    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
+        
+        filename = os.path.basename(file) # extract file name
+
+        df = pd.read_sas(file, format= 'xport')
+        df = df[Feature_Names]
+
+        df = cycle_checker(df, filename)
+
+        df.to_sql('Complete Blood Count', conn, if_exists='append', index=False)
+    conn.close()
+    print("Finished Ingestion of CBC data and DB Connection is closed")
+raw_CBC(FOLDER_PATH_CBC, FEATURES_TO_KEEP_CBC) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
