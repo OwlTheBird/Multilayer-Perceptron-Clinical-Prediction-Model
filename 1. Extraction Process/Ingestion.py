@@ -17,7 +17,7 @@ DB_NAME = "nhanes_1st.db"
 conn = sqlite3.connect(DB_NAME)
 
 FEATURES_TO_KEEP_DEMO = ['SEQN', 'RIAGENDR', 'RIDAGEYR', 'RIDRETH3', 'INDFMPIR']
-FEATURES_TO_KEEP_BMS = ['SEQN', 'BMXBMI', 'BMXHT']
+FEATURES_TO_KEEP_BMS = ['SEQN', 'BMXBMI', 'BMXHT', 'BMXWAIST']
 FEATURES_TO_KEEP_VITALS = ['SEQN', 'BPXPLS', 'BPXOPLS'] #BPXOPLS is Oscillometric Measurements, while BPXPLS is done using manual device
 
 
@@ -69,6 +69,7 @@ def raw_bodyMeasures(folder_Path: str, Feature_Names: list[str]) -> None:
 
         df = pd.read_sas(file, format= 'xport')
         df = df[Feature_Names]
+        df = df.rename(columns={'BMXWAIST': 'BMXWAIST (target)'})
 
         df = cycle_checker(df, filename)
         df.to_sql('Body Measures', conn, if_exists='append', index=False)
@@ -78,9 +79,15 @@ def raw_bodyMeasures(folder_Path: str, Feature_Names: list[str]) -> None:
 
 
 # this is a Data Harmonization problem
-MANUAL_COL = 'BPXPLS'
-OSCILLO_COLS = ['BPXOPLS1', 'BPXOPLS2', 'BPXOPLS3'] 
-FINAL_FEATURE = 'Pulse'
+MANUAL_PULSE = 'BPXPLS'
+OSCILLO_PULSE_COLS = ['BPXOPLS1', 'BPXOPLS2', 'BPXOPLS3']
+
+# Manual
+MANUAL_SY = ['BPXSY1', 'BPXSY2', 'BPXSY3']
+MANUAL_DI = ['BPXDI1', 'BPXDI2', 'BPXDI3']
+# Oscillometric
+OSCILLO_SY = ['BPXOSY1', 'BPXOSY2', 'BPXOSY3']
+OSCILLO_DI = ['BPXODI1', 'BPXODI2', 'BPXODI3']
 
 def raw_Vitals(folder_Path: str) -> None:
     files_list = glob.glob(folder_Path)
@@ -93,36 +100,47 @@ def raw_Vitals(folder_Path: str) -> None:
         df = cycle_checker(df, filename) 
         current_cycle = df['Cycle'].iloc[0]
         
-        # Ensure Columns Exist and fill missing with NaN values
-        if MANUAL_COL not in df.columns:
-            df[MANUAL_COL] = np.nan
-        for col in OSCILLO_COLS:
+        all_needed_cols = [MANUAL_PULSE] + OSCILLO_PULSE_COLS + \
+                          MANUAL_SY + MANUAL_DI + OSCILLO_SY + OSCILLO_DI
+        
+        for col in all_needed_cols:
             if col not in df.columns:
                 df[col] = np.nan
 
-        # we create harmonized pulse to fix the data harmonization problem
+        # Logic: If Manual Systolic 1 (BPXSY1) exists, we assume Manual (0).
+        # If it is Null, we assume we are relying on Oscillometric (1).
+        df['Is_Oscillometric'] = np.where(df[MANUAL_SY[0]].notna(), 0, 1)
 
-        # calculate mean of oscillo(modern and more accurate) readings
-        oscillo_mean = df[OSCILLO_COLS].mean(axis=1)
+        # Calculate mean of oscillo readings
+        oscillo_pulse_mean = df[OSCILLO_PULSE_COLS].mean(axis=1)
+        # Fill Manual Pulse gaps with Oscillo Mean
+        df['Pulse'] = df[MANUAL_PULSE].fillna(oscillo_pulse_mean)
+
+        #HARMONIZE BLOOD PRESSURE
+        # We loop through 1, 2, 3. 
+        # We fill the Manual column with the Oscillo value if Manual is missing.
+        for i in range(3):
+            # Harmonize Systolic: BPXSY1 = BPXSY1 (Manual) filled with BPXOSY1 (Oscillo)
+            df[MANUAL_SY[i]] = df[MANUAL_SY[i]].fillna(df[OSCILLO_SY[i]])
+            
+            # Harmonize Diastolic: BPXDI1 = BPXDI1 (Manual) filled with BPXODI1 (Oscillo)
+            df[MANUAL_DI[i]] = df[MANUAL_DI[i]].fillna(df[OSCILLO_DI[i]])
+
+        # We now treat MANUAL_SY/DI cols as our "Master" cols
+        final_cols = ['SEQN', 'Cycle', 'Is_Oscillometric', 'Pulse'] + MANUAL_SY + MANUAL_DI
         
-        # create pulse and fill NaN in Manual with oscillo Mean
-        df[FINAL_FEATURE] = df[MANUAL_COL].fillna(oscillo_mean)
-
-        # FEATURE ENGINEERING: Create "Method Flag"
-        # Logic: If 'BPXPLS' (Manual) is NOT Null, then Flag = 0 (Manual).
-        # Otherwise, it is Oscillometric, so Flag = 1.
-        df['Is_Oscillometric'] = np.where(df[MANUAL_COL].notna(), 0, 1)
-
-
-        cols_to_keep = ['SEQN', FINAL_FEATURE, 'Is_Oscillometric', 'Cycle']
-        df = df[cols_to_keep]
+        df_final = df[final_cols].copy()
         
-        # 6. Save to SQL
-        df.to_sql('Vitals', conn, if_exists='append', index=False)
+        rename_dict = {}
+        for col in MANUAL_SY + MANUAL_DI:
+            rename_dict[col] = f"{col} (target)"
+        df_final = df_final.rename(columns=rename_dict)
         
-        valid_rows = df[FINAL_FEATURE].count()
-        print(f"Processed {filename} ({current_cycle}): Saved {valid_rows} rows. Cols: {list(df.columns)}")
+        df_final.to_sql('Vitals', conn, if_exists='append', index=False)
+        
+        valid_rows = df_final['Pulse'].count()
+        print(f"Processed {filename} ({current_cycle}): Saved {valid_rows} rows. Harmonized BP & Pulse.")
 
     conn.close()
-    print("\nFinished Ingestion for Vitals, DB Connection closed. Raw columns dropped. Flag added.")
-raw_Vitals(FOLDER_PATH_VITALS)
+    print("\nFinished Ingestion for Vitals. DB Connection closed.")
+raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
