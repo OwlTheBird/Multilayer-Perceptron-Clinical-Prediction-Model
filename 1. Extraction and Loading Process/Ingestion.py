@@ -411,4 +411,4 @@ def raw_Alchol(folder_Path: str, conn) -> None:
 
 
 
-raw_Alchol(FOLDER_PATH_ALCHOL, conn) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+#raw_Alchol(FOLDER_PATH_ALCHOL, conn) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
