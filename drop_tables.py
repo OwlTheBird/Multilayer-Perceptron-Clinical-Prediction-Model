@@ -4,10 +4,12 @@ import sqlite3
 conn = sqlite3.connect("nhanes_1st.db")
 cursor = conn.cursor()
 
-#drop vitals table
-cursor.execute("DROP TABLE IF EXISTS Vitals")
-
+#drop table
+#cursor.execute("DROP TABLE IF EXISTS chemi")
+#cursor.execute("DROP TABLE IF EXISTS HDL_Cholesterol")
+#cursor.execute("DROP TABLE IF EXISTS Triglycerides")
+cursor.execute("DROP TABLE IF EXISTS AlcoholUsage")
 
 conn.commit()
 conn.close()
-print("Table 'Vitals' has been dropped successfully.")
+print("Table has been dropped successfully.")
