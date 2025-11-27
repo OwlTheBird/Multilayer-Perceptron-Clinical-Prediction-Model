@@ -14,6 +14,7 @@ SQL_KIDNEY_FILE_PATH = os.path.join(script_dir, '..', 'databases', 'SQL_queries'
 SQL_LIVER_FILE_PATH = os.path.join(script_dir, '..', 'databases', 'SQL_queries', 'liver_target.sql')
 
 conn = sqlite3.connect(FOLDER_PATH_DB)
+
 con = duckdb.connect()
 
 with open(SQL_FILE_PATH, 'r') as file:
@@ -94,5 +95,22 @@ def liver_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
 
     return df
 df = liver_target(df, SQL_LIVER_FILE_PATH)
-print(df.sample(n=30))
+#print(df.sample(n=30))
 print(df[['ALT_Log']].isnull().sum())
+
+
+inputs = [
+    'RIDAGEYR', 'RIAGENDR', 'RIDRETH3', 'INDFMPIR', 'BMXBMI', 'BMXHT', 
+    'Pulse', 'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI', 
+    'LBXSCR', 'LBXSASSI', 'LBXSTB', 'LBXSGTSI', 'LBXSUA', 
+    'LBXSNASI', 'LBXSKSI', 'LBXTC', 'Alcohol_Drinks_Per_Week', 'SMQ040'
+]
+
+targets = [
+    'Cardiovascular_target', 
+    'Waist_Label', 'Triglycerides_Label', 'HDL_Label', 'BP_Label', 'Glucose_Label',
+    'ACR_Log', 'ALT_Log'
+]
+total = inputs + targets
+df = df[total]
+df.to_sql('raw_dataset', conn, if_exists='replace', index=False)
