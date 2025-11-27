@@ -26,6 +26,7 @@ FEATURES_TO_KEEP_CBC = ['SEQN', 'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI']
 FEATURES_TO_KEEP_BIO = ['SEQN', 'LBXSCR', 'LBXSASSI', 'LBXSATSI', 'LBXSTB', 
                         'LBXSGTSI', 'LBXSUA', 'LBXSNASI', 'LBXSKSI', 'LBXSGL'
 ]
+
 FEATURES_TO_KEEP_CHOL = ['SEQN', 'LBXTC']
 FEATURES_TO_KEEP_HDLCHOL = ['SEQN', 'LBDHDD']
 FEATURES_TO_KEEP_TRIGLY = ['SEQN', 'LBXTR']
@@ -33,6 +34,9 @@ FEATURES_TO_KEEP_ACURINE = ['SEQN', 'URXUMA', 'URXUCR']
 FEATURES_TO_KEEP_SMOKE = ['SEQN', 'SMQ020', 'SMQ040']
 FEATURES_TO_KEEP_ALCHOL = ['SEQN', 'ALQ101', 'ALQ120Q', 'ALQ130']
 FEATURES_TO_KEEP_HEARTPROB = ['SEQN', 'MCQ160B', 'MCQ160C', 'MCQ160D', 'MCQ160E', 'MCQ160F']
+FEATURES_TO_KEEP_GLUC = ['SEQN', 'LBXGLU']
+FEATURES_TO_KEEP_FASTING = ['SEQN', 'PHAFSTHR']
+
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 FOLDER_PATH_DEMO = os.path.join(script_dir, "Raw Data", "Demo_data", "*.xpt")
@@ -47,6 +51,8 @@ FOLDER_PATH_ACURINE = os.path.join(script_dir, "Raw Data", "AlbuminNCreatinine_d
 FOLDER_PATH_SMOKE = os.path.join(script_dir, "Raw Data", "Smoking_data", "*.xpt")
 FOLDER_PATH_ALCHOL = os.path.join(script_dir, "Raw Data", "Alcohol_data", "*.xpt")
 FOLDER_PATH_HEARTPROB = os.path.join(script_dir, "Raw Data", "heart_related_data", "*.xpt")
+FOLDER_PATH_GLUC = os.path.join(script_dir, "Raw Data", "Glucose_data", "*.xpt")
+FOLDER_PATH_FASTING = os.path.join(script_dir, "Raw Data", "Fasting_data", "*.xpt")
 
 def cycle_checker(df: pd.DataFrame, filename: str) -> pd.DataFrame:
         found_cycle = False
@@ -164,7 +170,7 @@ def raw_Vitals(folder_Path: str) -> None:
 
     conn.close()
     print("\nFinished Ingestion for Vitals. DB Connection closed.")
-raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+#raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
 
 def raw_CBC(folder_Path: str, Feature_Names: list[str]) -> None:
 
@@ -196,8 +202,9 @@ def raw_bioProfile(bio_folder_Path: str, FEATURES_TO_KEEP_BIO: list[str]) -> Non
         df = df[FEATURES_TO_KEEP_BIO]
 
         df = cycle_checker(df, filename)
+        #df.rename(columns={"LBXSATSI": "LBXSATSI (target)"}, inplace=True)
 
-        df.to_sql('Biochem Profile', conn, if_exists='append', index=False)
+        df.to_sql('BiochemProfile', conn, if_exists='append', index=False)
     conn.close()
     print("Finished Ingestion of Bio Profile data and DB Connection is closed")
 #raw_bioProfile(FOLDER_PATH_BIO, FEATURES_TO_KEEP_BIO ) # DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
@@ -458,3 +465,45 @@ def raw_HEARTPROB(folder_Path: str, Feature_Names: list[str]) -> None:
     conn.close()
     print("Finished Ingestion of HEARTPROB data and DB Connection is closed")
 #raw_HEARTPROB(FOLDER_PATH_HEARTPROB, FEATURES_TO_KEEP_HEARTPROB) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+
+
+def raw_GLUC(folder_Path: str, Feature_Names: list[str]) -> None:
+
+    files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
+    print(f' We have: {len(files_list)} Files in GLUCOSE {folder_Path}\n') #this will return the number of files that are in demo folder
+
+    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
+        
+        filename = os.path.basename(file) # extract file name
+
+        df = pd.read_sas(file, format= 'xport')
+        df = df[Feature_Names]
+
+        df = cycle_checker(df, filename)
+
+        # Creates table 'Demographics' if it's missing, and if it exist then append the data
+        df.to_sql('Glucose', conn, if_exists='append', index=False)
+    conn.close()
+    print("Finished Ingestion of glucose data and DB Connection is closed")
+#raw_GLUC(FOLDER_PATH_GLUC, FEATURES_TO_KEEP_GLUC) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+
+
+def raw_Fasting(folder_Path: str, Feature_Names: list[str]) -> None:
+
+    files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
+    print(f' We have: {len(files_list)} Files in FASTING {folder_Path}\n') #this will return the number of files that are in demo folder
+
+    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
+        
+        filename = os.path.basename(file) # extract file name
+
+        df = pd.read_sas(file, format= 'xport')
+        df = df[Feature_Names]
+
+        df = cycle_checker(df, filename)
+
+        # Creates table 'Demographics' if it's missing, and if it exist then append the data
+        df.to_sql('Fasting', conn, if_exists='append', index=False)
+    conn.close()
+    print("Finished Ingestion of Fasting data and DB Connection is closed")
+#raw_Fasting(FOLDER_PATH_FASTING, FEATURES_TO_KEEP_FASTING) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA

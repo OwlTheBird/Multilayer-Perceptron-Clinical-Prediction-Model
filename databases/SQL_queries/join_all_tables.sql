@@ -13,10 +13,13 @@ LEFT JOIN [Complete Blood Count] AS CBC
 LEFT JOIN [Total Cholesterol] AS TC
     ON Demo.SEQN = TC.SEQN
 
+LEFT JOIN Triglycerides AS Trig
+    ON Demo.SEQN = Trig.SEQN
+
 LEFT JOIN AlcholUsage AS AU
     ON Demo.SEQN = AU.SEQN
 
-LEFT JOIN [Biochem Profile] AS BP
+LEFT JOIN [BiochemProfile] AS BP
     ON Demo.SEQN = BP.SEQN
 
 LEFT JOIN HDL_Cholesterol AS HDL
@@ -29,5 +32,11 @@ LEFT JOIN Smoke AS S
     ON Demo.SEQN = S.SEQN
 
 LEFT JOIN HeartQuestions AS HQs
-    ON Demo.SEQN = HQs.SEQN;
+    ON Demo.SEQN = HQs.SEQN
+
+LEFT JOIN Glucose AS Gluc
+    ON Demo.SEQN = Gluc.SEQN
+
+LEFT JOIN Fasting AS fasti
+    ON Demo.SEQN = fasti.SEQN;
 --limit 10; 
