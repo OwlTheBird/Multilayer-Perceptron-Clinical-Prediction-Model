@@ -1,0 +1,8 @@
+/*
+DROP TABLE IF EXISTS chemi;
+DROP TABLE IF EXISTS HDL_Cholesterol;
+DROP TABLE IF EXISTS Triglycerides;
+
+*/
+
+DROP TABLE IF EXISTS AlcholUsage;

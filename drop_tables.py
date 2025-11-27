@@ -8,7 +8,7 @@ cursor = conn.cursor()
 #cursor.execute("DROP TABLE IF EXISTS chemi")
 #cursor.execute("DROP TABLE IF EXISTS HDL_Cholesterol")
 #cursor.execute("DROP TABLE IF EXISTS Triglycerides")
-cursor.execute("DROP TABLE IF EXISTS AlcoholUsage")
+cursor.execute("DROP TABLE IF EXISTS AlcholUsage")
 
 conn.commit()
 conn.close()

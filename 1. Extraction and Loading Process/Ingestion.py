@@ -13,7 +13,11 @@ CYCLE_MAP = {
 }
 
 DB_NAME = "nhanes_1st.db"
-conn = sqlite3.connect(DB_NAME)
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+FOLDER_PATH_DB = os.path.join(script_dir, '..', 'databases', DB_NAME)
+
+conn = sqlite3.connect(FOLDER_PATH_DB)
 
 FEATURES_TO_KEEP_DEMO = ['SEQN', 'RIAGENDR', 'RIDAGEYR', 'RIDRETH3', 'INDFMPIR']
 FEATURES_TO_KEEP_BMS = ['SEQN', 'BMXBMI', 'BMXHT', 'BMXWAIST']
@@ -28,6 +32,7 @@ FEATURES_TO_KEEP_TRIGLY = ['SEQN', 'LBXTR']
 FEATURES_TO_KEEP_ACURINE = ['SEQN', 'URXUMA', 'URXUCR']
 FEATURES_TO_KEEP_SMOKE = ['SEQN', 'SMQ020', 'SMQ040']
 FEATURES_TO_KEEP_ALCHOL = ['SEQN', 'ALQ101', 'ALQ120Q', 'ALQ130']
+FEATURES_TO_KEEP_HEARTPROB = ['SEQN', 'MCQ160B', 'MCQ160C', 'MCQ160D', 'MCQ160E', 'MCQ160F']
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 FOLDER_PATH_DEMO = os.path.join(script_dir, "Raw Data", "Demo_data", "*.xpt")
@@ -41,7 +46,7 @@ FOLDER_PATH_TRIGLY = os.path.join(script_dir, "Raw Data", "Triglycerides", "*.xp
 FOLDER_PATH_ACURINE = os.path.join(script_dir, "Raw Data", "AlbuminNCreatinine_data", "*.xpt")
 FOLDER_PATH_SMOKE = os.path.join(script_dir, "Raw Data", "Smoking_data", "*.xpt")
 FOLDER_PATH_ALCHOL = os.path.join(script_dir, "Raw Data", "Alcohol_data", "*.xpt")
-
+FOLDER_PATH_HEARTPROB = os.path.join(script_dir, "Raw Data", "heart_related_data", "*.xpt")
 
 def cycle_checker(df: pd.DataFrame, filename: str) -> pd.DataFrame:
         found_cycle = False
@@ -91,7 +96,7 @@ def raw_bodyMeasures(folder_Path: str, Feature_Names: list[str]) -> None:
         df.to_sql('Body Measures', conn, if_exists='append', index=False)
     conn.close()
     print("Finished Ingestion of BodyMeasures data and DB Connection is closed")
-#raw_bodyMeasures(FOLDER_PATH_BMS, FEATURES_TO_KEEP_BMS) DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+#raw_bodyMeasures(FOLDER_PATH_BMS, FEATURES_TO_KEEP_BMS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
 
 
 # this is a Data Harmonization problem
@@ -159,7 +164,7 @@ def raw_Vitals(folder_Path: str) -> None:
 
     conn.close()
     print("\nFinished Ingestion for Vitals. DB Connection closed.")
-#raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
 
 def raw_CBC(folder_Path: str, Feature_Names: list[str]) -> None:
 
@@ -317,20 +322,23 @@ def raw_SMOKE(folder_Path: str, Feature_Names: list[str]) -> None:
     print("Finished Ingestion of Smoke data and DB Connection is closed")
 #raw_SMOKE(FOLDER_PATH_SMOKE, FEATURES_TO_KEEP_SMOKE) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
 
-FINAL_COLUMNS = ['SEQN', 'ALQ101', 'Annual_Drinking_Days', 'ALQ130', 'Cycle']
-ALQ121_MAP = {
-    1: 365,  # Every day
-    2: 300,  # Nearly every day
-    3: 182,  # 3-4 times a week
-    4: 104,  # 2 times a week
-    5: 52,   # Once a week
-    6: 30,   # 2-3 times a month
-    7: 12,   # Once a month
-    8: 9,    # 7-11 times in last year
-    9: 2,    # 1-2 times in last year
-    10: 0,   # Never in the last year
-    77: None, # Refused/Don't know
-    99: None # Refused/Don't know
+
+FINAL_COLUMNS = ['SEQN', 'Cycle', 'ALQ101', 'ALQ130', 'Alcohol_Drinks_Per_Week']
+
+# MAP: Converts New Schema Categories (ALQ121) -> Days Per Week
+ALQ121_WEEKLY_MAP = {
+    1: 7.0,   # Every day
+    2: 5.0,   # Nearly every day
+    3: 3.5,   # 3-4 times a week
+    4: 2.0,   # 2 times a week
+    5: 1.0,   # Once a week
+    6: 0.5,   # 2-3 times a month
+    7: 0.25,  # Once a month
+    8: 0.05,  # 7-11 times in last year (Less than once a month)
+    9: 0.05,  # 1-2 times in last year (Less than once a month)
+    10: 0.0,  # Never in the last year
+    77: None, # Refused
+    99: None  # Don't know
 }
 
 def raw_Alchol(folder_Path: str, conn) -> None:
@@ -341,8 +349,7 @@ def raw_Alchol(folder_Path: str, conn) -> None:
     for file in files_list:
         filename = os.path.basename(file)
         
-        # 1. Determine Schema based on filename suffix
-        # We need to know this BEFORE processing columns
+
         current_cycle_suffix = None
         for suffix in CYCLE_MAP.keys():
             if suffix in filename:
@@ -358,57 +365,96 @@ def raw_Alchol(folder_Path: str, conn) -> None:
 
         df = pd.read_sas(file, format='xport')
 
-        # 2. Logic to Standardize Columns
-        if is_new_schema:
-            # === NEW DATA (2017-2023) ===
-            if 'ALQ111' in df.columns:
-                df.rename(columns={'ALQ111': 'ALQ101'}, inplace=True)
-            
-            # Map Categories to Numbers
-            if 'ALQ121' in df.columns:
-                df['Annual_Drinking_Days'] = df['ALQ121'].map(ALQ121_MAP)
-            else:
-                df['Annual_Drinking_Days'] = None
 
+        # Rename ALQ111 (New Screener) to ALQ101 (Old Screener) for consistent Phase 1 logic
+        if 'ALQ111' in df.columns:
+            df.rename(columns={'ALQ111': 'ALQ101'}, inplace=True)
+
+        # Ensure ALQ101 exists (fill with NaN if missing to prevent errors)
+        if 'ALQ101' not in df.columns:
+            df['ALQ101'] = np.nan
+
+
+        # Identify confirmed non-drinkers (Value 2 = No)
+        # We will use this mask at the very end to force 0.0
+        is_non_drinker = (df['ALQ101'] == 2)
+
+
+        df['_freq_days_per_week'] = np.nan # Initialize temp column
+
+        if is_new_schema:
+            # === Branch B: New Data (2017-2023) ===
+            # Input: ALQ121 -> Map to standardized weekly value
+            if 'ALQ121' in df.columns:
+                df['_freq_days_per_week'] = df['ALQ121'].map(ALQ121_WEEKLY_MAP)
+        
         else:
-            # === OLD DATA (2013-2016) ===
-            # Calc: Quantity * Unit
+
+            # Inputs: ALQ120Q (Quantity) & ALQ120U (Unit)
             if 'ALQ120Q' in df.columns and 'ALQ120U' in df.columns:
+                # Clean 999 (Don't know) in Quantity
+                quantity = df['ALQ120Q'].replace(999, np.nan)
+                
                 conditions = [
                     (df['ALQ120U'] == 1), # Week
-                    (df['ALQ120U'] == 2), # Month
-                    (df['ALQ120U'] == 3)  # Year
+                    (df['ALQ120U'] == 2), # Month (Divide by 4.3 avg weeks)
+                    (df['ALQ120U'] == 3)  # Year (Divide by 52 weeks)
                 ]
                 choices = [
-                    df['ALQ120Q'] * 52,
-                    df['ALQ120Q'] * 12,
-                    df['ALQ120Q'] * 1
+                    quantity,
+                    quantity / 4.3,
+                    quantity / 52
                 ]
-                df['Annual_Drinking_Days'] = np.select(conditions, choices, default=None)
-            else:
-                df['Annual_Drinking_Days'] = None
+                df['_freq_days_per_week'] = np.select(conditions, choices, default=np.nan)
 
-        # 3. Apply your cycle_checker
-        # This will add the 'Cycle' column
+        if 'ALQ130' in df.columns:
+            # Validation: Treat 999 (Don't know) and 777 (Refused) as NaN
+            intensity = df['ALQ130'].replace({777: np.nan, 999: np.nan})
+        else:
+            intensity = np.nan
+
+        df['Alcohol_Drinks_Per_Week'] = df['_freq_days_per_week'] * intensity
+
+
+        df.loc[is_non_drinker, 'Alcohol_Drinks_Per_Week'] = 0.0
+
+
+        # --- 4. Clean up columns for SQL ---
         df = cycle_checker(df, filename)
 
-        # 4. Clean up columns for SQL
-        # Ensure all FINAL_COLUMNS exist (fill with None if missing)
+        # Ensure all FINAL_COLUMNS exist
         for col in FINAL_COLUMNS:
             if col not in df.columns:
                 df[col] = None
         
-        # Select only the columns we want, in the correct order
-        df = df[FINAL_COLUMNS]
+        # Select final columns in order
+        df_final = df[FINAL_COLUMNS].copy()
 
         try:
-            df.to_sql('AlcholUsage', conn, if_exists='append', index=False)
-            print(f"--> Ingested {filename}")
+            df_final.to_sql('AlcholUsage', conn, if_exists='append', index=False)
+            print(f"--> Ingested {filename} | New Schema: {is_new_schema}")
         except Exception as e:
-            print(f"Error: {e}")
+            print(f"Error processing {filename}: {e}")
 
     print("Finished Ingestion of Alcohol data")
-
-
-
 #raw_Alchol(FOLDER_PATH_ALCHOL, conn) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+
+
+def raw_HEARTPROB(folder_Path: str, Feature_Names: list[str]) -> None:
+
+    files_list = glob.glob(folder_Path)
+    print(f' We have: {len(files_list)} Files in HEARTPROB_DATA {folder_Path}\n') #this will return the number of files that are in demo folder
+
+    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
+        
+        filename = os.path.basename(file) # extract file name
+
+        df = pd.read_sas(file, format= 'xport')
+        df = df[Feature_Names]
+
+        df = cycle_checker(df, filename)
+
+        df.to_sql('HeartQuestions', conn, if_exists='append', index=False)
+    conn.close()
+    print("Finished Ingestion of HEARTPROB data and DB Connection is closed")
+#raw_HEARTPROB(FOLDER_PATH_HEARTPROB, FEATURES_TO_KEEP_HEARTPROB) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
