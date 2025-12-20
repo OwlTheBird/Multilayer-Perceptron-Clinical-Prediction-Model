@@ -3,3 +3,7 @@ matplotlib
 seaborn
 numpy
 scipy
+duckdb
+torch
+scikit-learn
+streamlit
