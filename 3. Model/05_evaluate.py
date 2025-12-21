@@ -104,17 +104,16 @@ def evaluate_task_cardio(y_true, y_pred, mask):
 def evaluate_task_metabolic(y_true, y_pred, mask):
     """Evaluate metabolic syndrome components (multi-label classification)."""
     # Filter to valid predictions only
-    valid_mask = mask.bool().numpy()
-    if valid_mask.sum() == 0:
+    valid_mask = mask.bool()  # Keep as tensor for indexing
+    if valid_mask.sum().item() == 0:
         return {}
     
-    # Filter to valid samples (keep 2D shape)
-    # valid_mask is (batch_size, 5) - we need to find rows where at least one label is valid
-    row_valid = valid_mask.any(axis=1)
-    y_true_valid = y_true[row_valid].numpy()  # Shape: (n_valid, 5)
-    y_pred_valid = y_pred[row_valid].numpy()  # Shape: (n_valid, 5)
+    # Convert to numpy for easier manipulation
+    valid_mask_np = valid_mask.numpy()  # Shape: (batch_size, 5)
+    y_true_np = y_true.numpy()  # Shape: (batch_size, 5)
+    y_pred_np = y_pred.numpy()  # Shape: (batch_size, 5)
     
-    y_pred_proba = torch.sigmoid(torch.tensor(y_pred_valid)).numpy()
+    y_pred_proba = torch.sigmoid(y_pred).numpy()
     y_pred_binary = (y_pred_proba > 0.5).astype(int)
     
     labels = ['Waist', 'Triglycerides', 'HDL', 'Blood_Pressure', 'Glucose']
@@ -123,9 +122,9 @@ def evaluate_task_metabolic(y_true, y_pred, mask):
     # Per-label metrics
     for i, label in enumerate(labels):
         # Get valid samples for this specific label
-        label_valid_mask = valid_mask[row_valid, i]
+        label_valid_mask = valid_mask_np[:, i]
         if label_valid_mask.sum() > 0:
-            y_true_label = y_true_valid[label_valid_mask, i]
+            y_true_label = y_true_np[label_valid_mask, i]
             y_pred_label = y_pred_binary[label_valid_mask, i]
             y_proba_label = y_pred_proba[label_valid_mask, i]
             
@@ -142,13 +141,24 @@ def evaluate_task_metabolic(y_true, y_pred, mask):
             else:
                 metrics[f'{label}_roc_auc'] = 0.0
     
-    # Overall metrics (micro-averaged)
-    metrics['micro_accuracy'] = accuracy_score(y_true_valid.flatten(), y_pred_binary.flatten())
-    metrics['micro_precision'] = precision_score(y_true_valid.flatten(), y_pred_binary.flatten(), zero_division=0)
-    metrics['micro_recall'] = recall_score(y_true_valid.flatten(), y_pred_binary.flatten(), zero_division=0)
-    metrics['micro_f1'] = f1_score(y_true_valid.flatten(), y_pred_binary.flatten(), zero_division=0)
+    # Overall metrics (micro-averaged) - only on valid samples
+    # Flatten all valid samples across all labels
+    valid_samples = valid_mask_np.flatten()
+    y_true_flat = y_true_np.flatten()[valid_samples]
+    y_pred_binary_flat = y_pred_binary.flatten()[valid_samples]
     
-    metrics['n_samples'] = valid_mask.sum()
+    if len(y_true_flat) > 0:
+        metrics['micro_accuracy'] = accuracy_score(y_true_flat, y_pred_binary_flat)
+        metrics['micro_precision'] = precision_score(y_true_flat, y_pred_binary_flat, zero_division=0)
+        metrics['micro_recall'] = recall_score(y_true_flat, y_pred_binary_flat, zero_division=0)
+        metrics['micro_f1'] = f1_score(y_true_flat, y_pred_binary_flat, zero_division=0)
+    else:
+        metrics['micro_accuracy'] = 0.0
+        metrics['micro_precision'] = 0.0
+        metrics['micro_recall'] = 0.0
+        metrics['micro_f1'] = 0.0
+    
+    metrics['n_samples'] = valid_mask_np.sum()
     
     return metrics
 
