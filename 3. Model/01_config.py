@@ -16,30 +16,33 @@ DB_PATH = os.path.join(SCRIPT_DIR, '..', 'databases', 'ML_data.db')
 
 CONT_COLS = [
     # Demographics (scaled)
-    'RIDAGEYR', 'INDFMPIR',
+    'age', 'income_ratio',
     
     # Body Measures (scaled)
-    'BMXBMI', 'BMXHT',
+    'body_mass_index', 'height_cm',
     
     # Vitals (scaled)
-    'Pulse',
+    'heart_rate_bpm',
     
     # Blood Count (scaled)
-    'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI',
+    'white_blood_cells_count', 'platelets_count', 'hemoglobin_g_dl', 'mean_corpuscular_volume_fL',
     
     # Biochemistry (scaled)
-    'LBXSCR', 'LBXSASSI', 'LBXSTB', 'LBXSGTSI',
-    'LBXSUA', 'LBXSNASI', 'LBXSKSI', 'LBXTC',
+    'creatinine_mg_dl', 'liver_ast_U_L', 'bilirubin_mg_dl', 'liver_ggt_U_L',
+    'uric_acid_mg_dl', 'sodium_mmol_L', 'potassium_mmol_L', 'cholesterol_mg_dl',
     
     # Lifestyle (scaled)
-    'Alcohol_Drinks_Per_Week', 'SMQ040',
+    'alcohol_drinks_per_week',
     
-    # One-Hot Encoded Gender
-    'RIAGENDR_1.0', 'RIAGENDR_2.0',
+    # One-Hot Encoded Gender (from 'gender')
+    'gender_1.0', 'gender_2.0',
     
-    # One-Hot Encoded Race/Ethnicity
-    'RIDRETH3_1.0', 'RIDRETH3_2.0', 'RIDRETH3_3.0',
-    'RIDRETH3_4.0', 'RIDRETH3_6.0', 'RIDRETH3_7.0'
+    # One-Hot Encoded Race/Ethnicity (from 'ethnicity')
+    'ethnicity_1.0', 'ethnicity_2.0', 'ethnicity_3.0',
+    'ethnicity_4.0', 'ethnicity_6.0', 'ethnicity_7.0',
+    
+    # One-Hot Encoded Smoking Status (from 'smoking_status')
+    'smoking_status_1.0', 'smoking_status_2.0', 'smoking_status_3.0', 'smoking_status_nan'
 ]
 
 # --- TARGETS ---
@@ -47,22 +50,22 @@ CONT_COLS = [
 
 TARGET_MAPPING = {
     # Head A: Binary Classification
-    'cardio': 'Cardiovascular_target',
+    'cardio': 'has_cardiovascular_disease',
     
     # Head B: Multi-Label Classification (5 labels for metabolic syndrome)
     'metabolic': [
-        'Waist_Label',
-        'Triglycerides_Label',
-        'HDL_Label',
-        'BP_Label',
-        'Glucose_Label'
+        'high_waist_circumference',
+        'high_triglycerides_mg_dl',
+        'low_hdl_mg_dl',
+        'high_blood_pressure',
+        'high_glucose_mg_dl'
     ],
     
     # Head C: Regression (Log Scale)
-    'kidney': 'ACR_Log',
+    'kidney': 'kidney_acr_mg_g',
     
     # Head D: Regression (Log Scale)
-    'liver': 'ALT_Log'
+    'liver': 'liver_alt_U_L'
 }
 
 # --- HYPERPARAMETERS ---

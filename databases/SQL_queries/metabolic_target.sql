@@ -7,7 +7,7 @@ SELECT
         WHEN RIAGENDR = 2 AND "BMXWAIST (target)" > 88  THEN 1
         WHEN "BMXWAIST (target)" IS NULL OR RIAGENDR IS NULL THEN NULL
         ELSE 0
-    END AS Waist_Label,
+    END AS high_waist_circumference,
 
     -- 2. Triglycerides Label
     -- NCEP ATP III: >= 150 mg/dL
@@ -15,7 +15,7 @@ SELECT
         WHEN "LBXTLG (target)" >= 150 THEN 1
         WHEN "LBXTLG (target)" IS NULL THEN NULL
         ELSE 0
-    END AS Triglycerides_Label,
+    END AS high_triglycerides_mg_dl,
 
     -- 3. HDL Label (Reduced HDL)
     -- NCEP ATP III: < 40 mg/dL (Men), < 50 mg/dL (Women)
@@ -24,7 +24,7 @@ SELECT
         WHEN RIAGENDR = 2 AND "LBDHDD (target)" < 50 THEN 1
         WHEN "LBDHDD (target)" IS NULL OR RIAGENDR IS NULL THEN NULL
         ELSE 0
-    END AS HDL_Label,
+    END AS low_hdl_mg_dl,
 
     -- 4. Blood Pressure Label
     -- NCEP ATP III: >= 130 mmHg Systolic OR >= 85 mmHg Diastolic
@@ -36,7 +36,7 @@ SELECT
         
         -- Only return 0 if both values exist and both are normal
         ELSE 0
-    END AS BP_Label,
+    END AS high_blood_pressure,
 
 -- 5. Glucose Label (Elevated Fasting Glucose)
     -- NCEP ATP III (2005 Revision): >= 100 mg/dL
@@ -49,6 +49,6 @@ SELECT
         WHEN PHAFSTHR >= 8 AND LBXGLU < 100 THEN 0
 
         ELSE NULL
-    END AS Glucose_Label
+    END AS high_glucose_mg_dl
 
 FROM table_df;

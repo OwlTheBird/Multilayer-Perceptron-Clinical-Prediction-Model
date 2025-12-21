@@ -64,8 +64,8 @@ st.sidebar.header("📋 Enter Patient Data")
 
 # Demographics
 st.sidebar.subheader("Demographics")
-age = st.sidebar.slider("Age (RIDAGEYR)", 18, 100, 45)
-pir = st.sidebar.slider("Poverty-Income Ratio (INDFMPIR)", 0.0, 5.0, 2.0, step=0.1)
+age = st.sidebar.slider("Age", 18, 100, 45)
+pir = st.sidebar.slider("Poverty-Income Ratio", 0.0, 5.0, 2.0, step=0.1)
 gender = st.sidebar.selectbox("Gender", ["Male", "Female"])
 race = st.sidebar.selectbox("Race/Ethnicity", [
     "Mexican American (1)",
@@ -78,8 +78,8 @@ race = st.sidebar.selectbox("Race/Ethnicity", [
 
 # Body Measures
 st.sidebar.subheader("Body Measures")
-bmi = st.sidebar.slider("BMI (BMXBMI)", 15.0, 60.0, 25.0, step=0.1)
-height = st.sidebar.slider("Height cm (BMXHT)", 100.0, 220.0, 170.0, step=0.5)
+bmi = st.sidebar.slider("BMI", 15.0, 60.0, 25.0, step=0.1)
+height = st.sidebar.slider("Height (cm)", 100.0, 220.0, 170.0, step=0.5)
 
 # Vitals
 st.sidebar.subheader("Vitals")
@@ -87,26 +87,26 @@ pulse = st.sidebar.slider("Pulse (BPM)", 40, 140, 70)
 
 # Blood Count
 st.sidebar.subheader("Blood Count")
-wbc = st.sidebar.slider("White Blood Cells (LBXWBCSI)", 2.0, 20.0, 7.0, step=0.1)
-platelets = st.sidebar.slider("Platelets (LBXPLTSI)", 100.0, 500.0, 250.0, step=5.0)
-hemoglobin = st.sidebar.slider("Hemoglobin (LBXHGB)", 8.0, 20.0, 14.0, step=0.1)
-mcv = st.sidebar.slider("Mean Corpuscular Volume (LBXMCVSI)", 70.0, 110.0, 90.0, step=0.5)
+wbc = st.sidebar.slider("White Blood Cells", 2.0, 20.0, 7.0, step=0.1)
+platelets = st.sidebar.slider("Platelets", 100.0, 500.0, 250.0, step=5.0)
+hemoglobin = st.sidebar.slider("Hemoglobin", 8.0, 20.0, 14.0, step=0.1)
+mcv = st.sidebar.slider("Mean Corpuscular Volume", 70.0, 110.0, 90.0, step=0.5)
 
 # Biochemistry
 st.sidebar.subheader("Biochemistry")
-creatinine = st.sidebar.slider("Serum Creatinine (LBXSCR)", 0.3, 5.0, 1.0, step=0.05)
-ast = st.sidebar.slider("AST (LBXSASSI)", 5.0, 150.0, 25.0, step=1.0)
-bilirubin = st.sidebar.slider("Total Bilirubin (LBXSTB)", 0.1, 5.0, 0.8, step=0.1)
-ggt = st.sidebar.slider("GGT (LBXSGTSI)", 5.0, 200.0, 25.0, step=1.0)
-uric_acid = st.sidebar.slider("Uric Acid (LBXSUA)", 2.0, 12.0, 5.5, step=0.1)
-sodium = st.sidebar.slider("Sodium (LBXSNASI)", 130.0, 150.0, 140.0, step=0.5)
-potassium = st.sidebar.slider("Potassium (LBXSKSI)", 3.0, 6.0, 4.0, step=0.1)
-cholesterol = st.sidebar.slider("Total Cholesterol (LBXTC)", 100.0, 350.0, 200.0, step=5.0)
+creatinine = st.sidebar.slider("Serum Creatinine", 0.3, 5.0, 1.0, step=0.05)
+ast = st.sidebar.slider("AST", 5.0, 150.0, 25.0, step=1.0)
+bilirubin = st.sidebar.slider("Total Bilirubin", 0.1, 5.0, 0.8, step=0.1)
+ggt = st.sidebar.slider("GGT", 5.0, 200.0, 25.0, step=1.0)
+uric_acid = st.sidebar.slider("Uric Acid", 2.0, 12.0, 5.5, step=0.1)
+sodium = st.sidebar.slider("Sodium", 130.0, 150.0, 140.0, step=0.5)
+potassium = st.sidebar.slider("Potassium", 3.0, 6.0, 4.0, step=0.1)
+cholesterol = st.sidebar.slider("Total Cholesterol", 100.0, 350.0, 200.0, step=5.0)
 
 # Lifestyle
 st.sidebar.subheader("Lifestyle")
 alcohol = st.sidebar.slider("Alcohol Drinks/Week", 0.0, 50.0, 3.0, step=0.5)
-smoking = st.sidebar.slider("Smoking Status (SMQ040)", 0.0, 3.0, 0.0, step=1.0)
+smoking = st.sidebar.slider("Smoking Status", 0.0, 3.0, 0.0, step=1.0)
 
 
 # ===== ENCODE INPUTS =====

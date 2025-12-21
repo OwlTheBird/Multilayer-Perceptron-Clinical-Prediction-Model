@@ -18,6 +18,6 @@ SELECT --note that URXUMA: Albumin, urine (ug/mL) | URXUCR - Creatinine, urine (
             ln( 1 + ("URXUMA (target)" / "URXUCR (target)") * 100.00 )
         ELSE
             NULL
-        END AS ACR_Log
+        END AS kidney_acr_mg_g
 FROM table_df
 WHERE "URXUCR (target)" > 0;

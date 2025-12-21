@@ -13,5 +13,5 @@ SELECT SEQN,
 
     -- 4. EMPTY: If all columns are NULL, return NULL
     ELSE NULL 
-  END as Cardiovascular_target
+  END as has_cardiovascular_disease
 FROM HeartQuestions;

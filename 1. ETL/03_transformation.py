@@ -12,21 +12,21 @@ from sklearn.pipeline import Pipeline
 DB_NAME = "ML_data.db"
 SOURCE_DB_NAME = "nhanes_1st.db"
 
-# Column Definitions
+# Column Definitions (using standardized names from harmonization)
 INPUTS = [
-    'RIDAGEYR', 'RIAGENDR', 'RIDRETH3', 'INDFMPIR', 'BMXBMI', 'BMXHT', 
-    'Pulse', 'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI', 
-    'LBXSCR', 'LBXSASSI', 'LBXSTB', 'LBXSGTSI', 'LBXSUA', 
-    'LBXSNASI', 'LBXSKSI', 'LBXTC', 'Alcohol_Drinks_Per_Week', 'SMQ040'
+    'age', 'gender', 'ethnicity', 'income_ratio', 'body_mass_index', 'height_cm', 
+    'heart_rate_bpm', 'white_blood_cells_count', 'platelets_count', 'hemoglobin_g_dl', 'mean_corpuscular_volume_fL', 
+    'creatinine_mg_dl', 'liver_ast_U_L', 'bilirubin_mg_dl', 'liver_ggt_U_L', 'uric_acid_mg_dl', 
+    'sodium_mmol_L', 'potassium_mmol_L', 'cholesterol_mg_dl', 'alcohol_drinks_per_week', 'smoking_status'
 ]
 
 TARGETS = [
-    'Cardiovascular_target', 
-    'Waist_Label', 'Triglycerides_Label', 'HDL_Label', 'BP_Label', 'Glucose_Label',
-    'ACR_Log', 'ALT_Log'
+    'has_cardiovascular_disease', 
+    'high_waist_circumference', 'high_triglycerides_mg_dl', 'low_hdl_mg_dl', 'high_blood_pressure', 'high_glucose_mg_dl',
+    'kidney_acr_mg_g', 'liver_alt_U_L'
 ]
 
-CATEGORICAL_INPUTS = ['RIAGENDR', 'RIDRETH3']
+CATEGORICAL_INPUTS = ['gender', 'ethnicity', 'smoking_status']
 CONTINUOUS_INPUTS = [col for col in INPUTS if col not in CATEGORICAL_INPUTS]
 
 # --- Paths ---

@@ -47,20 +47,20 @@ for col in numeric_cols:
 # Check column names exist
 print("\n--- COLUMN NAME CHECK ---")
 expected_inputs = [
-    'RIDAGEYR', 'INDFMPIR', 'BMXBMI', 'BMXHT', 'Pulse',
-    'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI',
-    'LBXSCR', 'LBXSASSI', 'LBXSTB', 'LBXSGTSI',
-    'LBXSUA', 'LBXSNASI', 'LBXSKSI', 'LBXTC',
-    'Alcohol_Drinks_Per_Week', 'SMQ040',
-    'RIAGENDR_1.0', 'RIAGENDR_2.0',
-    'RIDRETH3_1.0', 'RIDRETH3_2.0', 'RIDRETH3_3.0',
-    'RIDRETH3_4.0', 'RIDRETH3_6.0', 'RIDRETH3_7.0'
+    'age', 'income_ratio', 'body_mass_index', 'height_cm', 'heart_rate_bpm',
+    'white_blood_cells_count', 'platelets_count', 'hemoglobin_g_dl', 'mean_corpuscular_volume_fL',
+    'creatinine_mg_dl', 'liver_ast_U_L', 'bilirubin_mg_dl', 'liver_ggt_U_L',
+    'uric_acid_mg_dl', 'sodium_mmol_L', 'potassium_mmol_L', 'cholesterol_mg_dl',
+    'alcohol_drinks_per_week', 'smoking_status',
+    'gender_1.0', 'gender_2.0',
+    'ethnicity_1.0', 'ethnicity_2.0', 'ethnicity_3.0',
+    'ethnicity_4.0', 'ethnicity_6.0', 'ethnicity_7.0'
 ]
 
 expected_targets = [
-    'Cardiovascular_target',
-    'Waist_Label', 'Triglycerides_Label', 'HDL_Label', 'BP_Label', 'Glucose_Label',
-    'ACR_Log', 'ALT_Log'
+    'has_cardiovascular_disease',
+    'high_waist_circumference', 'high_triglycerides_mg_dl', 'low_hdl_mg_dl', 'high_blood_pressure', 'high_glucose_mg_dl',
+    'kidney_acr_mg_g', 'liver_alt_U_L'
 ]
 
 print(f"Expected input columns: {len(expected_inputs)}")

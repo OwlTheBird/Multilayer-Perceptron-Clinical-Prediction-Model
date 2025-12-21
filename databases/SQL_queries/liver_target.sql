@@ -1,6 +1,6 @@
 SELECT 
     SEQN,
-    ln("LBXSATSI") AS ALT_Log
+    ln("LBXSATSI") AS liver_alt_U_L
 
 FROM 
     table_df

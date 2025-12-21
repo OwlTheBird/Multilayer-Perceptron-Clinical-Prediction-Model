@@ -51,10 +51,10 @@ def cardio_target(df: pd.DataFrame , query_path: str )-> pd.DataFrame:
     
     result_df = con.execute(query_cardio).df()
 
-    df = df.merge(result_df[['SEQN', 'Cardiovascular_target']], on='SEQN', how='left')
+    df = df.merge(result_df[['SEQN', 'has_cardiovascular_disease']], on='SEQN', how='left')
     return df
 df = cardio_target(df, SQL_CARDIO_FILE_PATH)
-print(df['Cardiovascular_target'].isnull().sum())
+print(df['has_cardiovascular_disease'].isnull().sum())
 
 
 def metabolic_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
@@ -65,11 +65,11 @@ def metabolic_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
     
     result_df = con.execute(query_metabolic).df()
 
-    df = df.merge(result_df[['SEQN', 'Waist_Label', 'Triglycerides_Label', 'HDL_Label', 'BP_Label', 'Glucose_Label']], on='SEQN', how='left')
+    df = df.merge(result_df[['SEQN', 'high_waist_circumference', 'high_triglycerides_mg_dl', 'low_hdl_mg_dl', 'high_blood_pressure', 'high_glucose_mg_dl']], on='SEQN', how='left')
     return df
 df = metabolic_target(df, SQL_METABOLIC_FILE_PATH)
 #print(df.sample(n=30))
-print(df[['Waist_Label', 'Triglycerides_Label', 'HDL_Label', 'BP_Label', 'Glucose_Label']].isnull().sum())
+print(df[['high_waist_circumference', 'high_triglycerides_mg_dl', 'low_hdl_mg_dl', 'high_blood_pressure', 'high_glucose_mg_dl']].isnull().sum())
 
 def kidney_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
     with open(query_path, 'r') as file:
@@ -78,12 +78,12 @@ def kidney_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
     con.register('table_df', df)
 
     result_df = con.execute(query_kidney).df()
-    df = df.merge(result_df[["SEQN", "ACR_mg_g", "ACR_Log"]], on= 'SEQN', how='left')
+    df = df.merge(result_df[["SEQN", "ACR_mg_g", "kidney_acr_mg_g"]], on= 'SEQN', how='left')
 
     return df
 df = kidney_target(df, SQL_KIDNEY_FILE_PATH)
 #print(df.sample(n=30))
-print(df[['ACR_mg_g', 'ACR_Log']].isnull().sum())
+print(df[['ACR_mg_g', 'kidney_acr_mg_g']].isnull().sum())
 
 def liver_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
     with open(query_path, 'r') as file:
@@ -91,12 +91,12 @@ def liver_target(df: pd.DataFrame, query_path: str) -> pd.DataFrame:
     con.register('table_df', df)
 
     result_df = con.execute(query_liver).df()
-    df = df.merge(result_df[["SEQN", "ALT_Log"]], on= 'SEQN', how='left')
+    df = df.merge(result_df[["SEQN", "liver_alt_U_L"]], on= 'SEQN', how='left')
 
     return df
 df = liver_target(df, SQL_LIVER_FILE_PATH)
 #print(df.sample(n=30))
-print(df[['ALT_Log']].isnull().sum())
+print(df[['liver_alt_U_L']].isnull().sum())
 
 
 inputs = [
@@ -107,10 +107,43 @@ inputs = [
 ]
 
 targets = [
-    'Cardiovascular_target', 
-    'Waist_Label', 'Triglycerides_Label', 'HDL_Label', 'BP_Label', 'Glucose_Label',
-    'ACR_Log', 'ALT_Log'
+    'has_cardiovascular_disease', 
+    'high_waist_circumference', 'high_triglycerides_mg_dl', 'low_hdl_mg_dl', 'high_blood_pressure', 'high_glucose_mg_dl',
+    'kidney_acr_mg_g', 'liver_alt_U_L'
 ]
 total = inputs + targets
 df = df[total]
+
+# ===== COLUMN RENAMING (Single Source of Truth) =====
+# Rename input feature columns to standardized names before saving to database
+# Note: Target columns already have standardized names from SQL queries
+COLUMN_RENAMING = {
+    # Input Features
+    'RIDAGEYR': 'age',
+    'RIAGENDR': 'gender',
+    'RIDRETH3': 'ethnicity',
+    'INDFMPIR': 'income_ratio',
+    'BMXBMI': 'body_mass_index',
+    'BMXHT': 'height_cm',
+    'Pulse': 'heart_rate_bpm',
+    'LBXWBCSI': 'white_blood_cells_count',
+    'LBXPLTSI': 'platelets_count',
+    'LBXHGB': 'hemoglobin_g_dl',
+    'LBXMCVSI': 'mean_corpuscular_volume_fL',
+    'LBXSCR': 'creatinine_mg_dl',
+    'LBXSASSI': 'liver_ast_U_L',
+    'LBXSTB': 'bilirubin_mg_dl',
+    'LBXSGTSI': 'liver_ggt_U_L',
+    'LBXSUA': 'uric_acid_mg_dl',
+    'LBXSNASI': 'sodium_mmol_L',
+    'LBXSKSI': 'potassium_mmol_L',
+    'LBXTC': 'cholesterol_mg_dl',
+    'Alcohol_Drinks_Per_Week': 'alcohol_drinks_per_week',
+    'SMQ040': 'smoking_status'
+}
+
+# Rename columns (only renames input features; targets already have correct names)
+df = df.rename(columns=COLUMN_RENAMING)
+print("✓ Columns renamed to standardized names")
+
 df.to_sql('raw_dataset', conn, if_exists='replace', index=False)
