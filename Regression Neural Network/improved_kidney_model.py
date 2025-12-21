@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+from pathlib import Path
 
 # Set random seed for reproducibility
 torch.manual_seed(42)
@@ -13,6 +14,11 @@ np.random.seed(42)
 
 def load_and_process_data(filepath):
     print("Loading data...")
+    # Convert relative path to absolute path relative to script location
+    if not os.path.isabs(filepath):
+        script_dir = Path(__file__).parent
+        filepath = script_dir / filepath
+    
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"File not found: {filepath}")
         
@@ -20,7 +26,7 @@ def load_and_process_data(filepath):
     
     # Define feature columns (first 35 columns as per notebook)
     feature_cols = df.columns[:35].tolist()
-    target_col = 'ACR_Log'
+    target_col = 'kidney_acr_mg_g'  # Updated to new standardized column name
     data_type_col = 'data_type'
     
     # Remove target from features if present to prevent data leakage
@@ -109,7 +115,10 @@ class ImprovedRegressionModel(nn.Module):
 def train_model():
     # Load Data
     try:
-        (X_train, y_train, Mask_train), (X_test, y_test, Mask_test) = load_and_process_data('datasets/combined_data.csv')
+        # Use path relative to script location
+        script_dir = Path(__file__).parent
+        data_path = script_dir / 'datasets' / 'combined_data.csv'
+        (X_train, y_train, Mask_train), (X_test, y_test, Mask_test) = load_and_process_data(str(data_path))
     except Exception as e:
         import traceback
         traceback.print_exc()

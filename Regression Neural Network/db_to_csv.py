@@ -78,9 +78,12 @@ def convert_db_to_csv(db_path, output_dir='datasets'):
             conn.close()
 
 if __name__ == "__main__":
-    db_path = r"e:\MY PROJECT\Machine Learning\Kidney Neural Network\datasets\ML_data.db"
-    output_dir = r"e:\MY PROJECT\Machine Learning\Kidney Neural Network\datasets"
+    # Use relative paths from the project root
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    db_path = project_root / "databases" / "ML_data.db"
+    output_dir = script_dir / "datasets"
     
     print(f"Starting database conversion for: {db_path}")
-    convert_db_to_csv(db_path, output_dir)
+    convert_db_to_csv(str(db_path), str(output_dir))
     print("Conversion completed.")
