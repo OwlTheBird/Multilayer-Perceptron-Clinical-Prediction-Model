@@ -4,7 +4,7 @@
 
 **Audit Date:** December 26, 2025  
 **Auditor Role:** Lead AI Auditor  
-**Document Purpose:** Peer-review justification for model validity
+**Document Purpose:** Peer-review
 
 ---
 
@@ -355,4 +355,3 @@ TASK_WEIGHTS = {
 
 **Document Prepared By:** AI Audit System  
 **Review Status:** Ready for peer review  
-**Confidentiality:** Internal / Publication Supplement
