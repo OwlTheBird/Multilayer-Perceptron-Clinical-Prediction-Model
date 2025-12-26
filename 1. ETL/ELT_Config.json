@@ -7,32 +7,92 @@
             "nhanes_1st": "../databases/nhanes_1st.db"
         }
     },
-
     "cycles": {
-    "_H": "2013-2014",
-    "_I": "2015-2016",
-    "_J": "2017-2018",
-    "P_": "2017-2020",
-    "_L": "2021-2023"
+        "_H": "2013-2014",
+        "_I": "2015-2016",
+        "_J": "2017-2018",
+        "P_": "2017-2020",
+        "_L": "2021-2023"
     },
-
-    "Features":{
-        "DEMO": ["SEQN", "RIAGENDR", "RIDAGEYR", "RIDRETH3", "INDFMPIR"],
-        "BMS": ["SEQN", "BMXBMI", "BMXHT", "BMXWAIST"],
-        "CBC": ["SEQN", "LBXWBCSI", "LBXPLTSI", "LBXHGB", "LBXMCVSI"],
-        "BIO": ["SEQN", "LBXSCR", "LBXSASSI", "LBXSATSI", "LBXSTB", "LBXSGTSI", "LBXSUA", "LBXSNASI", "LBXSKSI", "LBXSGL"],
-        "CHOL": ["SEQN", "LBXTC"],
-        "HDLCHOL": ["SEQN", "LBDHDD"],
-        "TRIGLY": ["SEQN", "LBXTR"],
-        "ACURINE": ["SEQN", "URXUMA", "URXUCR"],
-        "SMOKE": ["SEQN", "SMQ020", "SMQ040"],
-        "ALCHOL": ["SEQN", "ALQ101", "ALQ120Q", "ALQ130"],
-        "HEARTPROB": ["SEQN", "MCQ160B", "MCQ160C", "MCQ160D", "MCQ160E", "MCQ160F"],
-        "GLUC": ["SEQN", "LBXGLU"],
-        "FASTING": ["SEQN", "PHAFSTHR"]
+    "Features": {
+        "DEMO": [
+            "SEQN",
+            "RIAGENDR",
+            "RIDAGEYR",
+            "RIDRETH3",
+            "INDFMPIR"
+        ],
+        "BMS": [
+            "SEQN",
+            "BMXBMI",
+            "BMXHT",
+            "BMXWAIST"
+        ],
+        "CBC": [
+            "SEQN",
+            "LBXWBCSI",
+            "LBXPLTSI",
+            "LBXHGB",
+            "LBXMCVSI"
+        ],
+        "BIO": [
+            "SEQN",
+            "LBXSCR",
+            "LBXSASSI",
+            "LBXSATSI",
+            "LBXSTB",
+            "LBXSGTSI",
+            "LBXSUA",
+            "LBXSNASI",
+            "LBXSKSI",
+            "LBXSGL"
+        ],
+        "CHOL": [
+            "SEQN",
+            "LBXTC"
+        ],
+        "HDLCHOL": [
+            "SEQN",
+            "LBDHDD"
+        ],
+        "TRIGLY": [
+            "SEQN",
+            "LBXTR"
+        ],
+        "ACURINE": [
+            "SEQN",
+            "URXUMA",
+            "URXUCR"
+        ],
+        "SMOKE": [
+            "SEQN",
+            "SMQ020",
+            "SMQ040"
+        ],
+        "ALCHOL": [
+            "SEQN",
+            "ALQ101",
+            "ALQ120Q",
+            "ALQ130"
+        ],
+        "HEARTPROB": [
+            "SEQN",
+            "MCQ160B",
+            "MCQ160C",
+            "MCQ160D",
+            "MCQ160E",
+            "MCQ160F"
+        ],
+        "GLUC": [
+            "SEQN",
+            "LBXGLU"
+        ],
+        "FASTING": [
+            "SEQN",
+            "PHAFSTHR"
+        ]
     },
-    
-    "Paths":{
+    "Paths": {
         "DEMO": "Raw Data/Demo_data/*.xpt",
         "BMS": "Raw Data/bodyMeasures_data/*.xpt",
         "CBC": "Raw Data/BloodCount_data/*.xpt",
@@ -47,5 +107,147 @@
         "GLUC": "Raw Data/Glucose_data/*.xpt",
         "FASTING": "Raw Data/Fasting_data/*.xpt",
         "Vitals": "Raw Data/BloodPressure_data/*.xpt"
+    },
+    "SQL_Queries": {
+        "join_all_tables": "../databases/SQL_queries/join_all_tables.sql",
+        "cardio_target": "../databases/SQL_queries/cardiov_target.sql",
+        "metabolic_target": "../databases/SQL_queries/metabolic_target.sql",
+        "kidney_target": "../databases/SQL_queries/kidney_target.sql",
+        "liver_target": "../databases/SQL_queries/liver_target.sql",
+        "get_raw_dataset": "../databases/SQL_queries/get_raw_dataset.sql"
+    },
+    "Harmonization": {
+        "bp_columns": {
+            "systolic": [
+                "BPXSY1 (target)",
+                "BPXSY2 (target)",
+                "BPXSY3 (target)"
+            ],
+            "diastolic": [
+                "BPXDI1 (target)",
+                "BPXDI2 (target)",
+                "BPXDI3 (target)"
+            ]
+        },
+        "inputs": [
+            "RIDAGEYR",
+            "RIAGENDR",
+            "RIDRETH3",
+            "INDFMPIR",
+            "BMXBMI",
+            "BMXHT",
+            "Pulse",
+            "LBXWBCSI",
+            "LBXPLTSI",
+            "LBXHGB",
+            "LBXMCVSI",
+            "LBXSCR",
+            "LBXSASSI",
+            "LBXSTB",
+            "LBXSGTSI",
+            "LBXSUA",
+            "LBXSNASI",
+            "LBXSKSI",
+            "LBXTC",
+            "Alcohol_Drinks_Per_Week",
+            "SMQ040"
+        ],
+        "targets": [
+            "has_cardiovascular_disease",
+            "high_waist_circumference",
+            "high_triglycerides_mg_dl",
+            "low_hdl_mg_dl",
+            "high_blood_pressure",
+            "high_glucose_mg_dl",
+            "albuminuria_risk",
+            "liver_dysfunction"
+        ],
+        "column_renaming": {
+            "RIDAGEYR": "age",
+            "RIAGENDR": "gender",
+            "RIDRETH3": "ethnicity",
+            "INDFMPIR": "income_ratio",
+            "BMXBMI": "body_mass_index",
+            "BMXHT": "height_cm",
+            "Pulse": "heart_rate_bpm",
+            "LBXWBCSI": "white_blood_cells_count",
+            "LBXPLTSI": "platelets_count",
+            "LBXHGB": "hemoglobin_g_dl",
+            "LBXMCVSI": "mean_corpuscular_volume_fL",
+            "LBXSCR": "creatinine_mg_dl",
+            "LBXSASSI": "liver_ast_U_L",
+            "LBXSTB": "bilirubin_mg_dl",
+            "LBXSGTSI": "liver_ggt_U_L",
+            "LBXSUA": "uric_acid_mg_dl",
+            "LBXSNASI": "sodium_mmol_L",
+            "LBXSKSI": "potassium_mmol_L",
+            "LBXTC": "cholesterol_mg_dl",
+            "Alcohol_Drinks_Per_Week": "alcohol_drinks_per_week",
+            "SMQ040": "smoking_status"
+        }
+    },
+    "Transformation": {
+        "db_output": "ML_data.db",
+        "categorical_inputs": [
+            "gender",
+            "ethnicity",
+            "smoking_status"
+        ],
+        "test_size": 0.2,
+        "imputer": {
+            "max_iter": 10,
+            "random_state": 42
+        },
+        "random_state": 42
+    },
+    "biological_bounds": {
+        "Pulse": [
+            30,
+            200
+        ],
+        "Final_Harmonized_Systolic": [
+            70,
+            250
+        ],
+        "Final_Harmonized_Diastolic": [
+            40,
+            150
+        ],
+        "BMXBMI": [
+            10,
+            100
+        ],
+        "LBXGLU": [
+            20,
+            600
+        ],
+        "LBXHGB": [
+            3,
+            25
+        ],
+        "LBXWBCSI": [
+            1,
+            50
+        ],
+        "LBXPLTSI": [
+            20,
+            800
+        ]
+    },
+    "clinical_thresholds": {
+        "kidney_acr_micro": 30,
+        "kidney_acr_macro": 300,
+        "liver_alt_male": 40,
+        "liver_alt_female": 25
+    },
+    "digital_dust_mapping": {
+        "artifact_threshold": 1e-10,
+        "logical_zero": [
+            "income_ratio",
+            "alcohol_drinks_per_week"
+        ],
+        "biological_null": [
+            "bilirubin_mg_dl"
+        ]
     }
 }

@@ -42,7 +42,7 @@ def cycle_checker(df: pd.DataFrame, filename: str) -> pd.DataFrame:
 def transfer_to_db(folder_Path: str, Feature_Names: list[str], table_name: str, rename_flag: bool, renameDIC: dict) -> None:
 
     files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
-    print(f' We have: {len(files_list)} Files in {table_name} {folder_Path}\n') #this will return the number of files that are in demo folder
+    print(f' We have: {len(files_list)} Files in {table_name} {folder_Path}\n') #this will return the number of files
 
     all_dfs = []  # Collect all DataFrames
     for file in files_list: # loop thru every file to put it ingest it and put it in our database table
@@ -349,6 +349,6 @@ def raw_Alchol(folder_Path: str, conn) -> None:
 raw_Alchol(os.path.join(script_dir, *config["Paths"]["ALCHOL"].split("/"))\
                 , conn)
 
-# Close the database connection after all ingestion is complete
+
 conn.close()
 print("\n=== All Ingestion Complete. Database connection closed. ===")

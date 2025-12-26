@@ -38,5 +38,6 @@ LEFT JOIN Glucose AS Gluc
     ON Demo.SEQN = Gluc.SEQN
 
 LEFT JOIN Fasting AS fasti
-    ON Demo.SEQN = fasti.SEQN;
---limit 10; 
+    ON Demo.SEQN = fasti.SEQN
+
+WHERE Demo.RIDAGEYR >= 20 AND Demo.RIAGENDR IS NOT NULL;
