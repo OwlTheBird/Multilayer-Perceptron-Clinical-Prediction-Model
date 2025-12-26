@@ -1,0 +1,51 @@
+{
+    "DBs": {
+        "Names": {
+            "nhanes_1st": "nhanes_1st.db"
+        },
+        "Paths": {
+            "nhanes_1st": "../databases/nhanes_1st.db"
+        }
+    },
+
+    "cycles": {
+    "_H": "2013-2014",
+    "_I": "2015-2016",
+    "_J": "2017-2018",
+    "P_": "2017-2020",
+    "_L": "2021-2023"
+    },
+
+    "Features":{
+        "DEMO": ["SEQN", "RIAGENDR", "RIDAGEYR", "RIDRETH3", "INDFMPIR"],
+        "BMS": ["SEQN", "BMXBMI", "BMXHT", "BMXWAIST"],
+        "CBC": ["SEQN", "LBXWBCSI", "LBXPLTSI", "LBXHGB", "LBXMCVSI"],
+        "BIO": ["SEQN", "LBXSCR", "LBXSASSI", "LBXSATSI", "LBXSTB", "LBXSGTSI", "LBXSUA", "LBXSNASI", "LBXSKSI", "LBXSGL"],
+        "CHOL": ["SEQN", "LBXTC"],
+        "HDLCHOL": ["SEQN", "LBDHDD"],
+        "TRIGLY": ["SEQN", "LBXTR"],
+        "ACURINE": ["SEQN", "URXUMA", "URXUCR"],
+        "SMOKE": ["SEQN", "SMQ020", "SMQ040"],
+        "ALCHOL": ["SEQN", "ALQ101", "ALQ120Q", "ALQ130"],
+        "HEARTPROB": ["SEQN", "MCQ160B", "MCQ160C", "MCQ160D", "MCQ160E", "MCQ160F"],
+        "GLUC": ["SEQN", "LBXGLU"],
+        "FASTING": ["SEQN", "PHAFSTHR"]
+    },
+    
+    "Paths":{
+        "DEMO": "Raw Data/Demo_data/*.xpt",
+        "BMS": "Raw Data/bodyMeasures_data/*.xpt",
+        "CBC": "Raw Data/BloodCount_data/*.xpt",
+        "BIO": "Raw Data/BioChemistry_data/*.xpt",
+        "CHOL": "Raw Data/Cholesterol_data/*.xpt",
+        "HDLCHOL": "Raw Data/HDLChol_data/*.xpt",
+        "TRIGLY": "Raw Data/Triglycerides/*.xpt",
+        "ACURINE": "Raw Data/AlbuminNCreatinine_data/*.xpt",
+        "SMOKE": "Raw Data/Smoking_data/*.xpt",
+        "ALCHOL": "Raw Data/Alcohol_data/*.xpt",
+        "HEARTPROB": "Raw Data/heart_related_data/*.xpt",
+        "GLUC": "Raw Data/Glucose_data/*.xpt",
+        "FASTING": "Raw Data/Fasting_data/*.xpt",
+        "Vitals": "Raw Data/BloodPressure_data/*.xpt"
+    }
+}
