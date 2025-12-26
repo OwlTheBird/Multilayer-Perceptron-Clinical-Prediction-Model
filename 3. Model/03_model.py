@@ -14,12 +14,12 @@ class SharedBottomMTL(nn.Module):
     
     Architecture:
     - Input layer with BatchNorm for continuous features
-    - Shared encoder backbone (256 -> 192 -> 128)
+    - Shared encoder backbone (512 -> 256 -> 256)
     - Four task-specific heads:
         - Cardio: Binary classification (1 output)
         - Metabolic: Multi-label classification (5 outputs)
-        - Kidney: Regression (1 output)
-        - Liver: Regression (1 output)
+        - Kidney: Ordinal Binary Decomposition (2 outputs)
+        - Liver: Binary classification (1 output)
     """
     
     def __init__(self, num_continuous, hidden_dim=128):
@@ -35,21 +35,22 @@ class SharedBottomMTL(nn.Module):
         self.input_bn = nn.BatchNorm1d(num_continuous)
 
         # 2. Shared Encoder Backbone (Hard Parameter Sharing)
+        # WIDENED: 512→256→256 (was 256→192→128) to reduce gradient conflict
         self.shared_backbone = nn.Sequential(
-            # Layer 1: Input -> 256
-            nn.Linear(num_continuous, 256),
+            # Layer 1: Input -> 512
+            nn.Linear(num_continuous, 512),
+            nn.BatchNorm1d(512),
+            nn.LeakyReLU(0.1),
+            nn.Dropout(0.2),
+            
+            # Layer 2: 512 -> 256
+            nn.Linear(512, 256),
             nn.BatchNorm1d(256),
             nn.LeakyReLU(0.1),
             nn.Dropout(0.2),
             
-            # Layer 2: 256 -> 192
-            nn.Linear(256, 192),
-            nn.BatchNorm1d(192),
-            nn.LeakyReLU(0.1),
-            nn.Dropout(0.2),
-            
-            # Layer 3: 192 -> hidden_dim (128)
-            nn.Linear(192, hidden_dim),
+            # Layer 3: 256 -> hidden_dim (256)
+            nn.Linear(256, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.LeakyReLU(0.1),
             nn.Dropout(0.2)
@@ -62,10 +63,13 @@ class SharedBottomMTL(nn.Module):
         # Head B: Metabolic Syndrome - Multi-Label Classification (5 labels)
         self.head_metabolic = nn.Linear(hidden_dim, 5)
         
-        # Head C: Kidney Function - Regression (ACR_Log)
-        self.head_kidney = nn.Linear(hidden_dim, 1)
+        # Head C: Kidney Function - Ordinal Binary Decomposition
+        # Node A: Is ACR >= 30? (At least Micro)
+        # Node B: Is ACR >= 300? (Macro)
+        # Encoding: Normal=[0,0], Micro=[1,0], Macro=[1,1]
+        self.head_kidney = nn.Linear(hidden_dim, 2)
         
-        # Head D: Liver Function - Regression (ALT_Log)
+        # Head D: Liver Function - Binary Classification
         self.head_liver = nn.Linear(hidden_dim, 1)
 
     def forward(self, x_cont):
@@ -87,7 +91,7 @@ class SharedBottomMTL(nn.Module):
         # Get predictions from each task head
         out_cardio = self.head_cardio(z)      # [batch, 1]
         out_metabolic = self.head_metabolic(z) # [batch, 5]
-        out_kidney = self.head_kidney(z)       # [batch, 1]
+        out_kidney = self.head_kidney(z)       # [batch, 2] - ordinal nodes
         out_liver = self.head_liver(z)         # [batch, 1]
         
         return out_cardio, out_metabolic, out_kidney, out_liver

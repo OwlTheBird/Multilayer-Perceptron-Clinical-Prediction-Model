@@ -3,6 +3,12 @@ import os
 import glob # help us extract files path instead of doing it manually
 import sqlite3
 import numpy as np
+import json 
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+with open(os.path.join(script_dir, "ELT_Config.json"), "r") as f:
+    config = json.load(f)
 
 CYCLE_MAP = {
     "_H": "2013-2014",
@@ -14,45 +20,10 @@ CYCLE_MAP = {
 
 DB_NAME = "nhanes_1st.db"
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-FOLDER_PATH_DB = os.path.join(script_dir, '..', 'databases', DB_NAME)
+FOLDER_PATH_DB = os.path.join(script_dir, *config["DBs"]["Paths"]["nhanes_1st"].split("/"))
 
 conn = sqlite3.connect(FOLDER_PATH_DB)
 
-FEATURES_TO_KEEP_DEMO = ['SEQN', 'RIAGENDR', 'RIDAGEYR', 'RIDRETH3', 'INDFMPIR']
-FEATURES_TO_KEEP_BMS = ['SEQN', 'BMXBMI', 'BMXHT', 'BMXWAIST']
-#FEATURES_TO_KEEP_VITALS = ['SEQN', 'BPXPLS', 'BPXOPLS'] #BPXOPLS is Oscillometric Measurements, while BPXPLS is done using manual device
-FEATURES_TO_KEEP_CBC = ['SEQN', 'LBXWBCSI', 'LBXPLTSI', 'LBXHGB', 'LBXMCVSI']
-FEATURES_TO_KEEP_BIO = ['SEQN', 'LBXSCR', 'LBXSASSI', 'LBXSATSI', 'LBXSTB', 
-                        'LBXSGTSI', 'LBXSUA', 'LBXSNASI', 'LBXSKSI', 'LBXSGL'
-]
-
-FEATURES_TO_KEEP_CHOL = ['SEQN', 'LBXTC']
-FEATURES_TO_KEEP_HDLCHOL = ['SEQN', 'LBDHDD']
-FEATURES_TO_KEEP_TRIGLY = ['SEQN', 'LBXTR']
-FEATURES_TO_KEEP_ACURINE = ['SEQN', 'URXUMA', 'URXUCR']
-FEATURES_TO_KEEP_SMOKE = ['SEQN', 'SMQ020', 'SMQ040']
-FEATURES_TO_KEEP_ALCHOL = ['SEQN', 'ALQ101', 'ALQ120Q', 'ALQ130']
-FEATURES_TO_KEEP_HEARTPROB = ['SEQN', 'MCQ160B', 'MCQ160C', 'MCQ160D', 'MCQ160E', 'MCQ160F']
-FEATURES_TO_KEEP_GLUC = ['SEQN', 'LBXGLU']
-FEATURES_TO_KEEP_FASTING = ['SEQN', 'PHAFSTHR']
-
-
-script_dir = os.path.dirname(os.path.abspath(__file__))
-FOLDER_PATH_DEMO = os.path.join(script_dir, "Raw Data", "Demo_data", "*.xpt")
-FOLDER_PATH_BMS = os.path.join(script_dir, "Raw Data", "bodyMeasures_data", "*.xpt")
-FOLDER_PATH_VITALS = os.path.join(script_dir, "Raw Data", "BloodPressure_data", "*.xpt")
-FOLDER_PATH_CBC = os.path.join(script_dir, "Raw Data", "BloodCount_data", "*.xpt")
-FOLDER_PATH_BIO = os.path.join(script_dir, "Raw Data", "BioChemistry_data", "*.xpt")
-FOLDER_PATH_CHOL = os.path.join(script_dir, "Raw Data", "Cholesterol_data", "*.xpt")
-FOLDER_PATH_HDLCHOL = os.path.join(script_dir, "Raw Data", "HDLChol_data", "*.xpt")
-FOLDER_PATH_TRIGLY = os.path.join(script_dir, "Raw Data", "Triglycerides", "*.xpt")
-FOLDER_PATH_ACURINE = os.path.join(script_dir, "Raw Data", "AlbuminNCreatinine_data", "*.xpt")
-FOLDER_PATH_SMOKE = os.path.join(script_dir, "Raw Data", "Smoking_data", "*.xpt")
-FOLDER_PATH_ALCHOL = os.path.join(script_dir, "Raw Data", "Alcohol_data", "*.xpt")
-FOLDER_PATH_HEARTPROB = os.path.join(script_dir, "Raw Data", "heart_related_data", "*.xpt")
-FOLDER_PATH_GLUC = os.path.join(script_dir, "Raw Data", "Glucose_data", "*.xpt")
-FOLDER_PATH_FASTING = os.path.join(script_dir, "Raw Data", "Fasting_data", "*.xpt")
 
 def cycle_checker(df: pd.DataFrame, filename: str) -> pd.DataFrame:
         found_cycle = False
@@ -67,42 +38,99 @@ def cycle_checker(df: pd.DataFrame, filename: str) -> pd.DataFrame:
         if found_cycle is False:
             raise ValueError(f"Couldnt find a matching letter for the following file {filename}")
 
-def raw_Demographics(folder_Path: str, Feature_Names: list[str]) -> None:
+
+def transfer_to_db(folder_Path: str, Feature_Names: list[str], table_name: str, rename_flag: bool, renameDIC: dict) -> None:
 
     files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
-    print(f' We have: {len(files_list)} Files in Demographics {folder_Path}\n') #this will return the number of files that are in demo folder
+    print(f' We have: {len(files_list)} Files in {table_name} {folder_Path}\n') #this will return the number of files
 
+    all_dfs = []  # Collect all DataFrames
     for file in files_list: # loop thru every file to put it ingest it and put it in our database table
         
         filename = os.path.basename(file) # extract file name
 
         df = pd.read_sas(file, format= 'xport')
         df = df[Feature_Names]
+        if rename_flag:
+            for key in renameDIC.keys():
+                df = df.rename(columns={key: renameDIC[key]})
 
         df = cycle_checker(df, filename)
+        all_dfs.append(df)
 
-        # Creates table 'Demographics' if it's missing, and if it exist then append the data
-        df.to_sql('Demographics', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of Demographics data and DB Connection is closed")
-#raw_Demographics(FOLDER_PATH_DEMO, FEATURES_TO_KEEP_DEMO) DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+    # Concatenate all DataFrames and write once (idempotent: replace entire table)
+    if all_dfs:
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        combined_df.to_sql(table_name, conn, if_exists='replace', index=False)
+    print(f"Finished Ingestion of {table_name} data\n")
 
-def raw_bodyMeasures(folder_Path: str, Feature_Names: list[str]) -> None:
-    files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in BodyMeasures {folder_Path}\n')
+####################################### Demographic
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["DEMO"].split("/"))\
+                , config["Features"]["DEMO"]\
+                    , "Demographics", False, None)
 
-    for file in files_list:
-        filename = os.path.basename(file)
+####################################### Body Measures
+bodyMeasures_Dic ={
+    'BMXWAIST': 'BMXWAIST (target)'
+}
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["BMS"].split("/"))\
+                , config["Features"]["BMS"]\
+                    , "Body Measures", True, bodyMeasures_Dic)
 
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-        df = df.rename(columns={'BMXWAIST': 'BMXWAIST (target)'})
+####################################### CBC
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["CBC"].split("/"))\
+                , config["Features"]["CBC"]\
+                    , "Complete Blood Count", False, None)
 
-        df = cycle_checker(df, filename)
-        df.to_sql('Body Measures', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of BodyMeasures data and DB Connection is closed")
-#raw_bodyMeasures(FOLDER_PATH_BMS, FEATURES_TO_KEEP_BMS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+####################################### bio chem
+bioProfile_Dic = {
+    'LBXSATSI': 'LBXSATSI (target)'
+}
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["BIO"].split("/"))\
+                , config["Features"]["BIO"]\
+                    , "BiochemProfile", True, bioProfile_Dic)
+
+####################################### Chol
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["CHOL"].split("/"))\
+                , config["Features"]["CHOL"]
+                    , "Total Cholesterol", False, None)
+
+####################################### HDLCHOL
+HDLCHOL_Dic = {
+    "LBDHDD": "LBDHDD (target)"
+}
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["HDLCHOL"].split("/"))\
+                , config["Features"]["HDLCHOL"]\
+                    , "HDL_Cholesterol", True, HDLCHOL_Dic)
+
+####################################### ACURINE
+ACURINE_Dic = {
+    "URXUMA": "URXUMA (target)",
+    "URXUCR": "URXUCR (target)"
+}
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["ACURINE"].split("/"))\
+                , config["Features"]["ACURINE"]
+                    , "Albumin_Creatinie", True, ACURINE_Dic)
+
+####################################### SMOKE
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["SMOKE"].split("/"))\
+                , config["Features"]["SMOKE"]\
+                    , "Smoke", False, None)
+
+####################################### HEARTPROB
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["HEARTPROB"].split("/"))\
+                , config["Features"]["HEARTPROB"]\
+                    , "HeartQuestions", False, None)
+
+####################################### GLUC
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["GLUC"].split("/"))\
+                , config["Features"]["GLUC"]\
+                    , "Glucose", False, None)
+
+####################################### Fasting
+transfer_to_db(os.path.join(script_dir, *config["Paths"]["FASTING"].split("/")) \
+             , config["Features"]["FASTING"]\
+                , "Fasting", False, None)
 
 
 # this is a Data Harmonization problem
@@ -120,6 +148,7 @@ def raw_Vitals(folder_Path: str) -> None:
     files_list = glob.glob(folder_Path)
     print(f'Found {len(files_list)} files in {folder_Path}\n')
 
+    all_dfs = []  # Collect all DataFrames
     for file in files_list:
         filename = os.path.basename(file)
         
@@ -163,96 +192,26 @@ def raw_Vitals(folder_Path: str) -> None:
             rename_dict[col] = f"{col} (target)"
         df_final = df_final.rename(columns=rename_dict)
         
-        df_final.to_sql('Vitals', conn, if_exists='append', index=False)
+        all_dfs.append(df_final)
         
         valid_rows = df_final['Pulse'].count()
-        print(f"Processed {filename} ({current_cycle}): Saved {valid_rows} rows. Harmonized BP & Pulse.")
+        print(f"Processed {filename} ({current_cycle}): {valid_rows} rows. Harmonized BP & Pulse.")
 
-    conn.close()
-    print("\nFinished Ingestion for Vitals. DB Connection closed.")
-#raw_Vitals(FOLDER_PATH_VITALS) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+    # Concatenate all DataFrames and write once (idempotent: replace entire table)
+    if all_dfs:
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        combined_df.to_sql('Vitals', conn, if_exists='replace', index=False)
+    print(f"\nFinished Ingestion for Vitals. Total rows: {len(combined_df)}")
+raw_Vitals(os.path.join(script_dir, *config["Paths"]["Vitals"].split("/")))
 
-def raw_CBC(folder_Path: str, Feature_Names: list[str]) -> None:
 
-    files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
-    print(f' We have: {len(files_list)} Files in CBC {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-
-        df.to_sql('Complete Blood Count', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of CBC data and DB Connection is closed")
-#raw_CBC(FOLDER_PATH_CBC, FEATURES_TO_KEEP_CBC) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-def raw_bioProfile(bio_folder_Path: str, FEATURES_TO_KEEP_BIO: list[str]) -> None:
-    bio_files_list = glob.glob(bio_folder_Path)
-    print(f'Found {len(bio_files_list)} Biochemistry files.')
-
-    for file in bio_files_list:
-        filename = os.path.basename(file)
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[FEATURES_TO_KEEP_BIO]
-
-        df = cycle_checker(df, filename)
-        #df.rename(columns={"LBXSATSI": "LBXSATSI (target)"}, inplace=True)
-
-        df.to_sql('BiochemProfile', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of Bio Profile data and DB Connection is closed")
-#raw_bioProfile(FOLDER_PATH_BIO, FEATURES_TO_KEEP_BIO ) # DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-def raw_CHOL(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in chOL {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-
-        df.to_sql('Total Cholesterol', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of chole data and DB Connection is closed")
-#raw_CHOL(FOLDER_PATH_CHOL, FEATURES_TO_KEEP_CHOL) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-def raw_HDLCHOL(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in HDLCHOL {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-        df.rename(columns={"LBDHDD": "LBDHDD (target)"}, inplace=True)
-
-        df.to_sql('HDL_Cholesterol', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of HDLCHOL data and DB Connection is closed")
-#raw_HDLCHOL(FOLDER_PATH_HDLCHOL, FEATURES_TO_KEEP_HDLCHOL) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
 
 def raw_Triglycerides(folder_Path: str, Feature_Names: list[str]) -> None:
     
     files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in Triglycerides {folder_Path}\n') #this will return the number of files that are in demo folder
+    print(f' We have: {len(files_list)} Files in Triglycerides {folder_Path}\n')
 
+    all_dfs = []  # Collect all DataFrames
     for file in files_list: 
         filename = os.path.basename(file)
 
@@ -261,11 +220,10 @@ def raw_Triglycerides(folder_Path: str, Feature_Names: list[str]) -> None:
             if key in filename:
                 current_cycle = key
                 break
-        
 
         if current_cycle is None:
             print(f"Skipping {filename}: cycle not recognized.")
-            raise ValueError("fix ur fucking shit no cycle recognized")
+            raise ValueError(f"Unrecognized cycle in file: {filename}")
 
         # The 2021-2023 cycle (_L) which has different columns
         if current_cycle == '_L':
@@ -280,55 +238,17 @@ def raw_Triglycerides(folder_Path: str, Feature_Names: list[str]) -> None:
             if 'LBXTR' in df.columns:
                 df.rename(columns={'LBXTR': 'LBXTLG (target)'}, inplace=True)
 
-        df = cycle_checker(df, filename) 
-
-        df.to_sql('Triglycerides', conn, if_exists='append', index=False)
+        df = cycle_checker(df, filename)
+        all_dfs.append(df)
         print(f"Ingested {filename}")
 
-    # conn.close() # Best practice: Close connection outside the loop/function
-    print("Finished Ingestion of raw_Triglycerides data")
-#raw_Triglycerides(FOLDER_PATH_TRIGLY, FEATURES_TO_KEEP_TRIGLY) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-def raw_ACURINE(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in AlbuminNCreatinine_Data {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-        df.rename(columns={"URXUMA": "URXUMA (target)"}, inplace=True)
-        df.rename(columns={"URXUCR": "URXUCR (target)"}, inplace=True)
-
-        df.to_sql('Albumin_Creatinie', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of ACURINE data and DB Connection is closed")
-#raw_ACURINE(FOLDER_PATH_ACURINE, FEATURES_TO_KEEP_ACURINE) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-def raw_SMOKE(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in SMOKE_data {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-
-        df.to_sql('Smoke', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of Smoke data and DB Connection is closed")
-#raw_SMOKE(FOLDER_PATH_SMOKE, FEATURES_TO_KEEP_SMOKE) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
+    # Concatenate all DataFrames and write once (idempotent: replace entire table)
+    if all_dfs:
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        combined_df.to_sql('Triglycerides', conn, if_exists='replace', index=False)
+    print(f"Finished Ingestion of Triglycerides data. Total rows: {len(combined_df)}")
+raw_Triglycerides(os.path.join(script_dir, *config["Paths"]["TRIGLY"].split("/"))\
+                , config["Features"]["TRIGLY"])
 
 FINAL_COLUMNS = ['SEQN', 'Cycle', 'ALQ101', 'ALQ130', 'Alcohol_Drinks_Per_Week']
 
@@ -353,9 +273,9 @@ def raw_Alchol(folder_Path: str, conn) -> None:
     files_list = glob.glob(folder_Path)
     print(f' We have: {len(files_list)} Files in Alcohol_data\n')
 
+    all_dfs = []  # Collect all DataFrames
     for file in files_list:
         filename = os.path.basename(file)
-        
 
         current_cycle_suffix = None
         for suffix in CYCLE_MAP.keys():
@@ -372,7 +292,6 @@ def raw_Alchol(folder_Path: str, conn) -> None:
 
         df = pd.read_sas(file, format='xport')
 
-
         # Rename ALQ111 (New Screener) to ALQ101 (Old Screener) for consistent Phase 1 logic
         if 'ALQ111' in df.columns:
             df.rename(columns={'ALQ111': 'ALQ101'}, inplace=True)
@@ -381,52 +300,36 @@ def raw_Alchol(folder_Path: str, conn) -> None:
         if 'ALQ101' not in df.columns:
             df['ALQ101'] = np.nan
 
-
         # Identify confirmed non-drinkers (Value 2 = No)
-        # We will use this mask at the very end to force 0.0
         is_non_drinker = (df['ALQ101'] == 2)
-
 
         df['_freq_days_per_week'] = np.nan # Initialize temp column
 
         if is_new_schema:
             # === Branch B: New Data (2017-2023) ===
-            # Input: ALQ121 -> Map to standardized weekly value
             if 'ALQ121' in df.columns:
                 df['_freq_days_per_week'] = df['ALQ121'].map(ALQ121_WEEKLY_MAP)
-        
         else:
-
             # Inputs: ALQ120Q (Quantity) & ALQ120U (Unit)
             if 'ALQ120Q' in df.columns and 'ALQ120U' in df.columns:
-                # Clean 999 (Don't know) in Quantity
                 quantity = df['ALQ120Q'].replace(999, np.nan)
-                
                 conditions = [
                     (df['ALQ120U'] == 1), # Week
-                    (df['ALQ120U'] == 2), # Month (Divide by 4.3 avg weeks)
-                    (df['ALQ120U'] == 3)  # Year (Divide by 52 weeks)
+                    (df['ALQ120U'] == 2), # Month
+                    (df['ALQ120U'] == 3)  # Year
                 ]
-                choices = [
-                    quantity,
-                    quantity / 4.3,
-                    quantity / 52
-                ]
+                choices = [quantity, quantity / 4.3, quantity / 52]
                 df['_freq_days_per_week'] = np.select(conditions, choices, default=np.nan)
 
         if 'ALQ130' in df.columns:
-            # Validation: Treat 999 (Don't know) and 777 (Refused) as NaN
             intensity = df['ALQ130'].replace({777: np.nan, 999: np.nan})
         else:
             intensity = np.nan
 
         df['Alcohol_Drinks_Per_Week'] = df['_freq_days_per_week'] * intensity
-
-
         df.loc[is_non_drinker, 'Alcohol_Drinks_Per_Week'] = 0.0
 
-
-        # --- 4. Clean up columns for SQL ---
+        # Clean up columns for SQL
         df = cycle_checker(df, filename)
 
         # Ensure all FINAL_COLUMNS exist
@@ -434,76 +337,18 @@ def raw_Alchol(folder_Path: str, conn) -> None:
             if col not in df.columns:
                 df[col] = None
         
-        # Select final columns in order
         df_final = df[FINAL_COLUMNS].copy()
+        all_dfs.append(df_final)
+        print(f"--> Ingested {filename} | New Schema: {is_new_schema}")
 
-        try:
-            df_final.to_sql('AlcholUsage', conn, if_exists='append', index=False)
-            print(f"--> Ingested {filename} | New Schema: {is_new_schema}")
-        except Exception as e:
-            print(f"Error processing {filename}: {e}")
-
-    print("Finished Ingestion of Alcohol data")
-#raw_Alchol(FOLDER_PATH_ALCHOL, conn) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-
-def raw_HEARTPROB(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path)
-    print(f' We have: {len(files_list)} Files in HEARTPROB_DATA {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-
-        df.to_sql('HeartQuestions', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of HEARTPROB data and DB Connection is closed")
-#raw_HEARTPROB(FOLDER_PATH_HEARTPROB, FEATURES_TO_KEEP_HEARTPROB) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+    # Concatenate all DataFrames and write once (idempotent: replace entire table)
+    if all_dfs:
+        combined_df = pd.concat(all_dfs, ignore_index=True)
+        combined_df.to_sql('AlcholUsage', conn, if_exists='replace', index=False)
+    print(f"Finished Ingestion of Alcohol data. Total rows: {len(combined_df)}")
+raw_Alchol(os.path.join(script_dir, *config["Paths"]["ALCHOL"].split("/"))\
+                , conn)
 
 
-def raw_GLUC(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
-    print(f' We have: {len(files_list)} Files in GLUCOSE {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-
-        # Creates table 'Demographics' if it's missing, and if it exist then append the data
-        df.to_sql('Glucose', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of glucose data and DB Connection is closed")
-#raw_GLUC(FOLDER_PATH_GLUC, FEATURES_TO_KEEP_GLUC) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
-
-
-def raw_Fasting(folder_Path: str, Feature_Names: list[str]) -> None:
-
-    files_list = glob.glob(folder_Path) # get a list of files that end with .xpt
-    print(f' We have: {len(files_list)} Files in FASTING {folder_Path}\n') #this will return the number of files that are in demo folder
-
-    for file in files_list: # loop thru every file to put it ingest it and put it in our database table
-        
-        filename = os.path.basename(file) # extract file name
-
-        df = pd.read_sas(file, format= 'xport')
-        df = df[Feature_Names]
-
-        df = cycle_checker(df, filename)
-
-        # Creates table 'Demographics' if it's missing, and if it exist then append the data
-        df.to_sql('Fasting', conn, if_exists='append', index=False)
-    conn.close()
-    print("Finished Ingestion of Fasting data and DB Connection is closed")
-#raw_Fasting(FOLDER_PATH_FASTING, FEATURES_TO_KEEP_FASTING) #DO NOT RUN TWICE OR IT WILL CREATE DUPLICATE DATA
+conn.close()
+print("\n=== All Ingestion Complete. Database connection closed. ===")

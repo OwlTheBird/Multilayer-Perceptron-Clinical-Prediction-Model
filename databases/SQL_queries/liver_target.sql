@@ -1,8 +1,10 @@
+-- Liver Target: Extract raw ALT value (LBXSATSI = Alanine Aminotransferase)
+-- Classification threshold (40 U/L) will be applied in Python
+
 SELECT 
     SEQN,
-    ln("LBXSATSI") AS liver_alt_U_L
-
+    "LBXSATSI (target)" AS ALT_U_L
 FROM 
     table_df
 WHERE 
-    "LBXSATSI" > 0;
+    "LBXSATSI (target)" > 0;
