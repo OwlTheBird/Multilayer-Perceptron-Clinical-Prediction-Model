@@ -1,4 +1,4 @@
-# 🏥 NHANES Multi-Task Clinical Prediction Model
+# NHANES Multi-Task Clinical Prediction Model
 
 **Predicting 4 clinical outcomes simultaneously from a single blood draw using Multi-Task Learning.**
 
