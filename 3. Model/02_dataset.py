@@ -58,18 +58,33 @@ class NHANESMultiTaskDataset(Dataset):
         metabolic_data = metabolic_data.fillna(0)  # Fill NaN with 0
         self.y_metabolic = torch.tensor(metabolic_data.values, dtype=torch.float32)
         
-        # Task C: Kidney Function (Regression - ACR Log)
-        kidney_data = self.data[target_mapping['kidney']].copy()
-        self.mask_kidney = torch.tensor(~kidney_data.isnull().values, dtype=torch.float32).unsqueeze(1)
-        kidney_median = kidney_data.median()  # Use median for regression
-        kidney_data = kidney_data.fillna(kidney_median)
-        self.y_kidney = torch.tensor(kidney_data.values, dtype=torch.float32).unsqueeze(1)
+        # Task C: Kidney Function - Ordinal Binary Decomposition
+        # Converts 3-class ordinal to 2-node binary encoding:
+        #   Normal (0) -> [0, 0]  (ACR < 30)
+        #   Micro (1)  -> [1, 0]  (30 <= ACR < 300)
+        #   Macro (2)  -> [1, 1]  (ACR >= 300)
+        # Node A: Is ACR >= 30? | Node B: Is ACR >= 300?
+        kidney_raw = self.data[target_mapping['kidney']].copy()
+        self.mask_kidney = torch.tensor(~kidney_raw.isnull().values, dtype=torch.float32)
         
-        # Task D: Liver Function (Regression - ALT Log)
+        # Convert to ordinal encoding
+        kidney_ordinal = np.zeros((len(kidney_raw), 2), dtype=np.float32)
+        kidney_vals = kidney_raw.fillna(-1).values
+        # Node A: Class 1 or 2 -> 1
+        kidney_ordinal[:, 0] = (kidney_vals >= 1).astype(np.float32)
+        # Node B: Class 2 -> 1
+        kidney_ordinal[:, 1] = (kidney_vals >= 2).astype(np.float32)
+        # Set masked values to 0 (they'll be masked in loss anyway)
+        kidney_ordinal[kidney_vals < 0] = 0
+        
+        self.y_kidney = torch.tensor(kidney_ordinal, dtype=torch.float32)
+        self.mask_kidney = self.mask_kidney.unsqueeze(1).expand(-1, 2)  # Expand mask to [N, 2]
+        
+        # Task D: Liver Function (Binary Classification)
+        # Gender-adjusted threshold already applied in ETL
         liver_data = self.data[target_mapping['liver']].copy()
         self.mask_liver = torch.tensor(~liver_data.isnull().values, dtype=torch.float32).unsqueeze(1)
-        liver_median = liver_data.median()  # Use median for regression
-        liver_data = liver_data.fillna(liver_median)
+        liver_data = liver_data.fillna(0)  # Fill NaN with 0 (masked anyway)
         self.y_liver = torch.tensor(liver_data.values, dtype=torch.float32).unsqueeze(1)
         
         # Print stats
