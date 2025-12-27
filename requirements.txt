@@ -7,3 +7,4 @@ duckdb
 torch
 scikit-learn
 streamlit
+optuna

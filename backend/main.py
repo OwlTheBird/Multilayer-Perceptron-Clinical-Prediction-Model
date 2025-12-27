@@ -12,6 +12,7 @@ from typing import List, Dict, Any
 import torch
 import torch.nn as nn
 import numpy as np
+import onnxruntime as ort
 import os
 
 app = FastAPI(
@@ -78,35 +79,8 @@ class ImprovedRegressionModel(nn.Module):
         return self.fc4(x)
 
 
-class SharedBottomMTL(nn.Module):
-    """Multi-Task Learning Model - 30 features, 4 outputs"""
-    def __init__(self, num_continuous=30, hidden_dim=256):
-        super().__init__()
-        self.input_bn = nn.BatchNorm1d(num_continuous)
-        self.shared_backbone = nn.Sequential(
-            nn.Linear(num_continuous, 512),
-            nn.BatchNorm1d(512),
-            nn.LeakyReLU(0.1),
-            nn.Dropout(0.2),
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.LeakyReLU(0.1),
-            nn.Dropout(0.2),
-            nn.Linear(256, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
-            nn.LeakyReLU(0.1),
-            nn.Dropout(0.2)
-        )
-        self.head_cardio = nn.Linear(hidden_dim, 1)
-        self.head_metabolic = nn.Linear(hidden_dim, 5)
-        self.head_kidney = nn.Linear(hidden_dim, 2)
-        self.head_liver = nn.Linear(hidden_dim, 1)
-
-    def forward(self, x_cont):
-        x = self.input_bn(x_cont)
-        z = self.shared_backbone(x)
-        return (self.head_cardio(z), self.head_metabolic(z), 
-                self.head_kidney(z), self.head_liver(z))
+# MTL Model is now loaded via ONNX Runtime (architecture-independent)
+# No need to define SharedBottomMTL class here - ONNX contains both architecture and weights
 
 
 # ============================================================================
@@ -172,6 +146,7 @@ class MTLResponse(BaseModel):
 # ============================================================================
 
 models = {"classification": None, "regression": None, "mtl": None}
+mtl_onnx_session = None  # ONNX Runtime session for MTL model
 
 
 def load_models():
@@ -186,9 +161,9 @@ def load_models():
             models["classification"].load_state_dict(
                 torch.load(path, map_location="cpu", weights_only=True))
             models["classification"].eval()
-            print("✓ Classification model loaded (30 features)")
+            print("[OK] Classification model loaded (30 features)")
     except Exception as e:
-        print(f"✗ Classification error: {e}")
+        print(f"[ERROR] Classification error: {e}")
     
     # Load Regression Model (34 features)
     try:
@@ -198,21 +173,26 @@ def load_models():
             models["regression"].load_state_dict(
                 torch.load(path, map_location="cpu", weights_only=True))
             models["regression"].eval()
-            print("✓ Regression model loaded (34 features)")
+            print("[OK] Regression model loaded (34 features)")
     except Exception as e:
-        print(f"✗ Regression error: {e}")
+        print(f"[ERROR] Regression error: {e}")
     
-    # Load MTL Model (30 features)
+    # Load MTL Model via ONNX Runtime (architecture-independent)
+    global mtl_onnx_session
     try:
-        path = os.path.join(base_path, "3. Model", "trained_model.pth")
+        path = os.path.join(base_path, "3. Model", "trained_model.onnx")
         if os.path.exists(path):
-            models["mtl"] = SharedBottomMTL(30, 256)
-            models["mtl"].load_state_dict(
-                torch.load(path, map_location="cpu", weights_only=True))
-            models["mtl"].eval()
-            print("✓ MTL model loaded (30 features)")
+            # Use CPU execution provider
+            mtl_onnx_session = ort.InferenceSession(
+                path, 
+                providers=['CPUExecutionProvider']
+            )
+            models["mtl"] = mtl_onnx_session
+            print("[OK] MTL model loaded via ONNX (architecture-independent)")
+        else:
+            print(f"[WARNING] MTL ONNX model not found at: {path}")
     except Exception as e:
-        print(f"✗ MTL error: {e}")
+        print(f"[ERROR] MTL ONNX error: {e}")
 
 
 @app.on_event("startup")
@@ -288,19 +268,26 @@ async def predict_regression(request: PredictionRequest):
 
 @app.post("/predict/mtl", response_model=MTLResponse)
 async def predict_mtl(request: PredictionRequest):
-    if models["mtl"] is None:
-        raise HTTPException(status_code=503, detail="Model not loaded")
+    if mtl_onnx_session is None:
+        raise HTTPException(status_code=503, detail="MTL ONNX model not loaded")
     if len(request.features) != 30:
         raise HTTPException(status_code=400, detail=f"Expected 30 features, got {len(request.features)}")
     
-    with torch.no_grad():
-        x = torch.tensor([request.features], dtype=torch.float32)
-        cardio, metabolic, kidney, liver = models["mtl"](x)
-        
-        cardio_prob = torch.sigmoid(cardio).item()
-        metabolic_probs = torch.sigmoid(metabolic)[0].tolist()
-        kidney_probs = torch.sigmoid(kidney)[0].tolist()
-        liver_prob = torch.sigmoid(liver).item()
+    # Run ONNX inference
+    input_array = np.array([request.features], dtype=np.float32)
+    outputs = mtl_onnx_session.run(
+        ['cardio_logits', 'metabolic_logits', 'kidney_logits', 'liver_logits'],
+        {'input_features': input_array}
+    )
+    
+    # Apply sigmoid to logits
+    def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+    
+    cardio_prob = float(sigmoid(outputs[0][0][0]))
+    metabolic_probs = sigmoid(outputs[1][0]).tolist()
+    kidney_probs = sigmoid(outputs[2][0]).tolist()
+    liver_prob = float(sigmoid(outputs[3][0][0]))
     
     return MTLResponse(
         cardiovascular_disease={"probability": round(cardio_prob, 4), "risk": "High" if cardio_prob > 0.5 else "Low"},

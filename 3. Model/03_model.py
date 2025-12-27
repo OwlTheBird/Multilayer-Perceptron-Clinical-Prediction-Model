@@ -14,7 +14,7 @@ class SharedBottomMTL(nn.Module):
     
     Architecture:
     - Input layer with BatchNorm for continuous features
-    - Shared encoder backbone (512 -> 256 -> 256)
+    - Shared encoder backbone (dynamically sized based on hidden_dim)
     - Four task-specific heads:
         - Cardio: Binary classification (1 output)
         - Metabolic: Multi-label classification (5 outputs)
@@ -22,38 +22,47 @@ class SharedBottomMTL(nn.Module):
         - Liver: Binary classification (1 output)
     """
     
-    def __init__(self, num_continuous, hidden_dim=128):
+    def __init__(self, num_continuous, hidden_dim=256, dropout_rate=0.2):
         """
         Args:
             num_continuous: Number of continuous input features
-            hidden_dim: Dimension of the final shared layer (default: 128)
+            hidden_dim: Dimension of the final shared layer (default: 256)
+            dropout_rate: Dropout probability for regularization (default: 0.2)
         """
         super(SharedBottomMTL, self).__init__()
+        
+        # Store config for reference
+        self.hidden_dim = hidden_dim
+        self.dropout_rate = dropout_rate
 
         # 1. Input Processing
         # BatchNorm for continuous inputs (data is already scaled, but helps training)
         self.input_bn = nn.BatchNorm1d(num_continuous)
 
         # 2. Shared Encoder Backbone (Hard Parameter Sharing)
-        # WIDENED: 512→256→256 (was 256→192→128) to reduce gradient conflict
+        # Dynamic sizing: wider backbone for larger hidden_dim to maintain capacity
+        # Layer sizes scale proportionally: 2x -> 1.5x -> 1x hidden_dim
+        layer1_dim = min(hidden_dim * 2, 2048)  # Cap at 2048 for memory
+        layer2_dim = min(int(hidden_dim * 1.5), 1536)  # Cap at 1536
+        
         self.shared_backbone = nn.Sequential(
-            # Layer 1: Input -> 512
-            nn.Linear(num_continuous, 512),
-            nn.BatchNorm1d(512),
+            # Layer 1: Input -> layer1_dim
+            nn.Linear(num_continuous, layer1_dim),
+            nn.BatchNorm1d(layer1_dim),
             nn.LeakyReLU(0.1),
-            nn.Dropout(0.2),
+            nn.Dropout(dropout_rate),
             
-            # Layer 2: 512 -> 256
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
+            # Layer 2: layer1_dim -> layer2_dim
+            nn.Linear(layer1_dim, layer2_dim),
+            nn.BatchNorm1d(layer2_dim),
             nn.LeakyReLU(0.1),
-            nn.Dropout(0.2),
+            nn.Dropout(dropout_rate),
             
-            # Layer 3: 256 -> hidden_dim (256)
-            nn.Linear(256, hidden_dim),
+            # Layer 3: layer2_dim -> hidden_dim
+            nn.Linear(layer2_dim, hidden_dim),
             nn.BatchNorm1d(hidden_dim),
             nn.LeakyReLU(0.1),
-            nn.Dropout(0.2)
+            nn.Dropout(dropout_rate)
         )
 
         # 3. Task-Specific Heads
