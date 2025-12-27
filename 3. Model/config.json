@@ -1,0 +1,72 @@
+{
+  "database": {
+    "path": "../databases/ML_data.db"
+  },
+  
+  "features": {
+    "continuous_columns": [
+      "age", "income_ratio",
+      "body_mass_index", "height_cm",
+      "heart_rate_bpm",
+      "white_blood_cells_count", "platelets_count", "hemoglobin_g_dl", "mean_corpuscular_volume_fL",
+      "creatinine_mg_dl", "liver_ast_U_L", "bilirubin_mg_dl", "liver_ggt_U_L",
+      "uric_acid_mg_dl", "sodium_mmol_L", "potassium_mmol_L", "cholesterol_mg_dl",
+      "alcohol_drinks_per_week",
+      "gender_1.0", "gender_2.0",
+      "ethnicity_1.0", "ethnicity_2.0", "ethnicity_3.0", "ethnicity_4.0", "ethnicity_6.0", "ethnicity_7.0",
+      "smoking_status_1.0", "smoking_status_2.0", "smoking_status_3.0", "smoking_status_nan"
+    ]
+  },
+  
+  "targets": {
+    "cardio": "has_cardiovascular_disease",
+    "metabolic": [
+      "high_waist_circumference",
+      "high_triglycerides_mg_dl",
+      "low_hdl_mg_dl",
+      "high_blood_pressure",
+      "high_glucose_mg_dl"
+    ],
+    "kidney": "albuminuria_risk",
+    "liver": "liver_dysfunction"
+  },
+  
+  "class_weights": {
+    "cvd_pos_weight": 7.36,
+    "liver_pos_weight": 5.62,
+    "triglycerides_pos_weight": 3.76,
+    "hdl_pos_weight": 2.40,
+    "bp_pos_weight": 1.78,
+    "waist_pos_weight": null,
+    "glucose_pos_weight": null,
+    "kidney_class_weights": [0.073, 0.59, 2.8]
+  },
+  
+  "task_weights": {
+    "cvd": 1.0,
+    "metabolic_waist": 1.0,
+    "metabolic_trig": 0.5,
+    "metabolic_hdl": 1.0,
+    "metabolic_bp": 1.0,
+    "metabolic_glucose": 0.5,
+    "kidney": 1.0,
+    "liver": 1.0
+  },
+  
+  "hyperparameters": {
+    "batch_size": 128,
+    "learning_rate": 0.00024,
+    "epochs": 20,
+    "hidden_dim": 512,
+    "dropout_rate": 0.05,
+    "weight_decay": 0.00042,
+    "focal_gamma": 1.0
+  },
+  
+  "kidney_ordinal_weights": [4.5, 5.0],
+  
+  "optimal_thresholds": {
+    "cvd": 0.33,
+    "liver": 0.44
+  }
+}

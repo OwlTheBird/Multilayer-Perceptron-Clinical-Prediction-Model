@@ -152,13 +152,13 @@ def masked_weighted_bce_loss(pred, target, mask, device, pos_weight=None):
     return torch.tensor(0.0, device=device)
 
 
-def ordinal_weighted_bce_loss(pred, target, mask, device):
+def ordinal_weighted_bce_loss(pred, target, mask, device, kidney_weights=None):
     """
     Weighted BCE for ordinal binary decomposition (kidney head).
     
     Applies different pos_weights to each node:
-      - Node A (ACR >= 30): pos_weight = 4.5 (~18% positive)
-      - Node B (ACR >= 300): pos_weight = 30.0 (~3% positive)
+      - Node A (ACR >= 30): Default pos_weight = 4.5 (~18% positive)
+      - Node B (ACR >= 300): Default pos_weight = 30.0 (~3% positive)
     
     This penalizes missing disease signals more heavily.
     
@@ -167,12 +167,17 @@ def ordinal_weighted_bce_loss(pred, target, mask, device):
         target: Ground truth ordinal encoding [batch, 2]
         mask: Valid target mask [batch, 2]
         device: torch device
+        kidney_weights: Optional tuple/list of (node_a_weight, node_b_weight)
+                       If None, uses defaults [4.5, 30.0]
     
     Returns:
         Mean weighted loss over valid targets
     """
     # Per-node weights: [Node A, Node B]
-    ordinal_weights = torch.tensor([4.5, 30.0], device=device, dtype=torch.float32)
+    if kidney_weights is None:
+        ordinal_weights = torch.tensor([4.5, 30.0], device=device, dtype=torch.float32)
+    else:
+        ordinal_weights = torch.tensor(kidney_weights, device=device, dtype=torch.float32)
     
     loss_fn = nn.BCEWithLogitsLoss(reduction='none', pos_weight=ordinal_weights)
     loss = loss_fn(pred, target)
@@ -302,7 +307,8 @@ def train():
     
     mtl_model = SharedBottomMTL(
         num_continuous=num_continuous,
-        hidden_dim=config.HIDDEN_DIM
+        hidden_dim=config.HIDDEN_DIM,
+        dropout_rate=getattr(config, 'DROPOUT_RATE', 0.2)
     )
     
     # Move model to device
@@ -385,17 +391,19 @@ def train():
             # ============================================================
             
             # Task A: CVD - Focal Loss (better than weighted BCE for extreme imbalance)
-            loss_c = masked_focal_loss(p_cardio, y_cardio, mask_cardio, device, gamma=2.0)
+            focal_gamma = getattr(config, 'FOCAL_GAMMA', 2.0)
+            loss_c = masked_focal_loss(p_cardio, y_cardio, mask_cardio, device, gamma=focal_gamma)
             
             # Task B: Metabolic Syndrome - Per-component weighted BCE
             loss_m = compute_metabolic_loss(p_metabolic, y_metabolic, mask_metabolic, device)
             
             # Task C: Kidney - Weighted Ordinal Binary Decomposition
-            # Node A (ACR>=30): pos_weight=4.5, Node B (ACR>=300): pos_weight=30.0
-            loss_k = ordinal_weighted_bce_loss(p_kidney, y_kidney, mask_kidney, device)
+            # Using optimized weights from hyperparameter tuning
+            kidney_weights = getattr(config, 'KIDNEY_ORDINAL_WEIGHTS', [4.5, 30.0])
+            loss_k = ordinal_weighted_bce_loss(p_kidney, y_kidney, mask_kidney, device, kidney_weights=kidney_weights)
             
             # Task D: Liver - Focal Loss (better for imbalanced classification)
-            loss_l = masked_focal_loss(p_liver, y_liver, mask_liver, device, gamma=2.0)
+            loss_l = masked_focal_loss(p_liver, y_liver, mask_liver, device, gamma=focal_gamma)
             
             # Dynamic Task Weighting via Uncertainty
             # Use threshold optimization for production calibration

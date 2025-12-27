@@ -199,6 +199,10 @@ def evaluate_task_kidney(y_true, y_pred_logits, mask):
     metrics['confusion_matrix'] = confusion_matrix(y_true_class, y_pred_class, labels=[0, 1, 2])
     metrics['n_samples'] = int(valid_mask.sum())
     
+    # Store class arrays for classification_report
+    metrics['true_class'] = y_true_class
+    metrics['pred_class'] = y_pred_class
+    
     # Class distribution
     metrics['true_distribution'] = np.bincount(y_true_class, minlength=3).tolist()
     metrics['pred_distribution'] = np.bincount(y_pred_class, minlength=3).tolist()
@@ -356,17 +360,13 @@ def evaluate():
     print("=" * 60)
     cardio_metrics = evaluate_task_binary(cardio_true, cardio_pred, cardio_mask, 'CVD')
     if cardio_metrics:
-        print(f"Accuracy:    {cardio_metrics['accuracy']:.4f}")
-        print(f"Precision:   {cardio_metrics['precision']:.4f}")
-        print(f"Recall:      {cardio_metrics['recall']:.4f}")
-        print(f"F1 Score:    {cardio_metrics['f1']:.4f}")
-        print(f"Macro-F1:    {cardio_metrics['macro_f1']:.4f}")
-        print(f"ROC-AUC:     {cardio_metrics['roc_auc']:.4f}")
-        print(f"PR-AUC:      {cardio_metrics['pr_auc']:.4f}")
-        print(f"Positive Rate: {cardio_metrics['positive_rate']:.2%}")
-        print(f"Valid samples: {cardio_metrics['n_samples']}")
-        print("\nConfusion Matrix:")
-        print(cardio_metrics['confusion_matrix'])
+        # Use sklearn classification_report
+        valid_mask = cardio_mask.flatten().bool().numpy()
+        y_true = cardio_true[valid_mask].flatten().numpy().astype(int)
+        y_pred = (torch.sigmoid(cardio_pred[valid_mask]).flatten().numpy() > config.OPTIMAL_THRESHOLDS.get('cvd', 0.33)).astype(int)
+        print(classification_report(y_true, y_pred, target_names=['No CVD', 'CVD'], digits=4))
+        print(f"ROC-AUC: {cardio_metrics['roc_auc']:.4f}")
+        print(f"PR-AUC:  {cardio_metrics['pr_auc']:.4f}")
     
     # ============================================================
     # TASK B: METABOLIC SYNDROME (Multi-Label Classification)
@@ -413,11 +413,14 @@ def evaluate():
         print(f"  True: {kidney_metrics['true_distribution']}")
         print(f"  Pred: {kidney_metrics['pred_distribution']}")
         
-        print("\nConfusion Matrix:")
-        print("         Pred:Normal  Pred:Micro  Pred:Macro")
-        cm = kidney_metrics['confusion_matrix']
-        for i, name in enumerate(['True:Normal', 'True:Micro', 'True:Macro']):
-            print(f"  {name:12s} {cm[i][0]:6d}      {cm[i][1]:6d}      {cm[i][2]:6d}")
+        # Use sklearn classification_report for kidney
+        print("\nClassification Report:")
+        print(classification_report(
+            kidney_metrics['true_class'], 
+            kidney_metrics['pred_class'],
+            target_names=['Normal', 'Micro', 'Macro'],
+            digits=4
+        ))
     
     # ============================================================
     # TASK D: LIVER FUNCTION (Binary Classification)
@@ -427,17 +430,13 @@ def evaluate():
     print("=" * 60)
     liver_metrics = evaluate_task_binary(liver_true, liver_pred, liver_mask, 'Liver')
     if liver_metrics:
-        print(f"Accuracy:    {liver_metrics['accuracy']:.4f}")
-        print(f"Precision:   {liver_metrics['precision']:.4f}")
-        print(f"Recall:      {liver_metrics['recall']:.4f}")
-        print(f"F1 Score:    {liver_metrics['f1']:.4f}")
-        print(f"Macro-F1:    {liver_metrics['macro_f1']:.4f}")
-        print(f"ROC-AUC:     {liver_metrics['roc_auc']:.4f}")
-        print(f"PR-AUC:      {liver_metrics['pr_auc']:.4f}")
-        print(f"Positive Rate: {liver_metrics['positive_rate']:.2%}")
-        print(f"Valid samples: {liver_metrics['n_samples']}")
-        print("\nConfusion Matrix:")
-        print(liver_metrics['confusion_matrix'])
+        # Use sklearn classification_report
+        valid_mask = liver_mask.flatten().bool().numpy()
+        y_true = liver_true[valid_mask].flatten().numpy().astype(int)
+        y_pred = (torch.sigmoid(liver_pred[valid_mask]).flatten().numpy() > config.OPTIMAL_THRESHOLDS.get('liver', 0.44)).astype(int)
+        print(classification_report(y_true, y_pred, target_names=['Normal', 'Dysfunction'], digits=4))
+        print(f"ROC-AUC: {liver_metrics['roc_auc']:.4f}")
+        print(f"PR-AUC:  {liver_metrics['pr_auc']:.4f}")
     
     print("\n" + "=" * 60)
     print("EVALUATION COMPLETE")
