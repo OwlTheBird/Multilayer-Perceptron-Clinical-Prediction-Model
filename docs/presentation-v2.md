@@ -39,15 +39,14 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 
 ---
 
-# ETL Pipeline
+# ETL: Pipeline
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │  01_ingestion   │    │ 02_harmonize    │    │ 03_transform    │
 │                 │    │                 │    │                 │
-│  75 .xpt files  │───►│ Clinical rules  │───►│ MICE imputation │
-│  15 categories  │    │ Gender-adjusted │    │ Train/Test split│
-│  5 survey years │    │ thresholds      │    │ StandardScaler  │
+│    75 files     │───►│  Clean & Label  │───►│  StandardScaler │
+│ 5 survey years  │    │                 │    │ Train/Test split│
 └─────────────────┘    └─────────────────┘    └─────────────────┘
         │                      │                      │
         ▼                      ▼                      ▼
@@ -58,14 +57,14 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 
 # ETL: Data Sources
 
-| Category | Examples | Files |
-|----------|----------|-------|
-| Demographics | Age, Gender, Ethnicity | 5 |
-| Body Measures | BMI, Height, Waist | 5 |
-| Blood Tests | CBC, Biochemistry | 10 |
-| Metabolic | Glucose, Cholesterol, HDL, Triglycerides | 20 |
-| Organ Function | Kidney (ACR), Liver (ALT/AST) | 10 |
-| Lifestyle | Smoking, Alcohol | 10 |
+| Category | Examples |
+|----------|----------|
+| Demographics | Age, Gender, Ethnicity |
+| Body Measures | BMI, Height, Waist |
+| Blood Tests | CBC, Biochemistry |
+| Metabolic | Glucose, Cholesterol, HDL, Triglycerides |
+| Organ Function | Kidney (ACR), Liver (ALT/AST) |
+| Lifestyle | Smoking, Alcohol |
 
 **Total: 75 files → 34,097 patients**
 
@@ -78,43 +77,14 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 
 ---
 
-# EDA: Dataset Overview
-
-| Metric | Value |
-|--------|-------|
-| **Total Patients** | 34,097 |
-| **Features** | 21 inputs + 8 targets |
-| **Age Range** | 20 - 80 years |
-| **Mean BMI** | 29.7 (overweight) |
-
----
-
 # EDA: Univariate Analysis
 
-<!-- Shows distribution of each variable individually -->
-
-| Finding | Impact |
-|---------|--------|
-| Age: uniform 20-80 | Good coverage |
-| BMI: right-skewed | Some extreme obesity |
-| Blood tests: ~15% missing | Need masked loss |
-
-**Run:** `2. EDA/03_univariate_analysis.ipynb`
-**Diagram:** Histograms of all 18 continuous features
-
----
-
-# EDA: Class Imbalance Problem ⚠️
-
-```
-                    CVD Target Distribution
-
-    ████████████████████████████████████████  88% Healthy
-    █████  12% Has CVD
-
-                    → Model will predict "healthy" for everyone!
-                    → Solution: Weighted loss function
-```
+| Pattern | Features | Model Impact |
+|---------|----------|--------------|
+| **Heavy right skew** | liver_ast, liver_ggt, alcohol | Keep outliers (valid medical cases) |
+| **58% missing** | glucose, triglycerides | Masked loss required |
+| **Class imbalance** | CVD (88:12), Kidney (38:1) | Focal loss + pos_weight |
+| **Uniform/normal** | age, BMI, height | No special handling |
 
 ---
 
@@ -124,16 +94,16 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 
 # EDA: Bivariate Analysis
 
-**Top correlations with Heart Disease:**
+**Top correlated feature per task:**
 
-| Feature | Correlation | Meaning |
-|---------|-------------|---------|
-| Age | **0.32** | Older → more risk |
-| Creatinine | 0.16 | Kidney link |
-| Cholesterol | -0.14 | Inverse (treatment?) |
+| Task | Top Feature | Correlation |
+|------|-------------|-------------|
+| ❤️ CVD | age | **+0.32** |
+| 🍬 Waist | BMI | **+0.85** |
+| 🫘 Kidney | age | **+0.15** |
+| 🫀 Liver | liver_ggt | **+0.42** |
 
-**Run:** `2. EDA/04_bivariate_analysis.ipynb`
-**Diagram:** Boxplots of Age/BMI by CVD status
+**Insight:** Age predicts heart/kidney, BMI predicts waist, liver markers predict liver
 
 ---
 
@@ -153,8 +123,6 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
     Decision: KEEP (medically valid extreme cases)
 ```
 
-**Run:** `2. EDA/05_outlier_analysis.ipynb`
-
 ---
 
 ![bg contain](../assets/outlier-boxplots.png)
@@ -163,30 +131,16 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 
 # EDA: Multivariate Analysis
 
-<!-- Correlation heatmap showing feature relationships -->
+| Method | Result | Model Impact |
+|--------|--------|--------------|
+| **PCA** | 90% variance | Some redundancy, keep all features |
+| **K-Means** | 3 natural patient groups | Validates multi-task approach |
 
-**Key correlations found:**
-- `liver_ast` ↔ `liver_ggt`: 0.42 (both liver markers)
-- `height` ↔ `hemoglobin`: 0.38 (gender effect)
-- `platelets` ↔ `WBC`: 0.32 (blood cell counts)
-
-**Run:** `2. EDA/06_multivariate_analysis.ipynb`
-**Diagram:** Correlation heatmap (15×15 matrix)
+**Insight:** Patients cluster into different risk patterns
 
 ---
 
-![bg contain](../assets/multivariate-correlation-heatmap.png)
-
----
-
-# EDA: Key Findings Summary
-
-| Challenge | Solution |
-|-----------|----------|
-| **58% missing** (glucose, triglycerides) | Masked loss |
-| **7:1 class imbalance** (CVD) | Focal Loss + pos_weight |
-| **38:1 rare class** (severe kidney) | Ordinal encoding |
-| **High skewness** (liver markers) | Keep as valid medical cases |
+![bg contain](../assets/pca-clusters.png)
 
 ---
 
@@ -239,8 +193,6 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 <!-- Loss decreasing over epochs = model is learning -->
 
 ![](../training_loss_curve.png)
-
-**Loss dropped from 1.9 → 0.77** (60% reduction)
 
 ---
 
