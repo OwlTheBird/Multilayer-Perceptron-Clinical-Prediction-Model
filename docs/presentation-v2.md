@@ -196,46 +196,47 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 
 ---
 
+# Key Metrics Explained
+
+| Metric | What It Means | Our Goal |
+|--------|---------------|----------|
+| **ROC-AUC** | Can model rank sick vs healthy? | > 0.75 |
+| **Recall** | Of all sick people, how many caught? | > 50% |
+| **Macro-F1** | Balance across all classes | > 0.60 |
+
+---
+
 # Results: Cardiovascular Disease ❤️
 
-| Metric | Value | Meaning |
-|--------|-------|---------|
-| **ROC-AUC** | **0.83** | Good ranking ability |
-| **Recall** | 55.8% | Catches 56% of sick patients |
-| **Accuracy** | 83.5% | Overall correctness |
-
-```
-Confusion Matrix:     Predicted
-                    Healthy   CVD
-Actual  Healthy      5649     838
-        CVD           375     473  ← Caught!
-```
+| Metric | Value |
+|--------|-------|
+| **ROC-AUC** | **0.83** ✅ |
+| **Recall** | 55.8% ✅ |
+| **Macro-F1** | 0.67 ✅ |
 
 ---
 
 # Results: Metabolic Syndrome 🍬
 
-| Component | Accuracy | ROC-AUC |
-|-----------|----------|---------|
-| **Waist** | **90.9%** | **0.97** |
-| Triglycerides | 67.4% | 0.73 |
-| HDL | 67.5% | 0.74 |
-| Blood Pressure | 67.0% | 0.74 |
-| Glucose | 65.4% | 0.69 |
-
-**Overall Micro-F1: 0.72**
+| Component | ROC-AUC |
+|-----------|---------|
+| **Waist** | **0.97** ✅ |
+| Triglycerides | 0.73 |
+| HDL | 0.74 |
+| Blood Pressure | 0.74 |
+| Glucose | 0.69 |
 
 ---
 
 # Results: Kidney Function 🫘
 
-| Class | Recall | Count |
-|-------|--------|-------|
-| **Normal** | **84.0%** | 5,681 |
-| Microalbuminuria | 37.1% | 1,003 |
-| Macroalbuminuria | 30.1% | 203 |
+| Metric | Value |
+|--------|-------|
+| **Macro-F1** | 0.50 ⚠️ |
+| Normal Recall | 84% |
+| Severe Recall | 30% |
 
-**Challenge:** Only 203 severe cases (2%) → hard to learn
+**Challenge:** Only 203 severe cases (2%)
 
 ---
 
@@ -243,16 +244,9 @@ Actual  Healthy      5649     838
 
 | Metric | Value |
 |--------|-------|
-| **ROC-AUC** | **0.92** |
-| **Accuracy** | **88.3%** |
-| **Macro-F1** | **0.82** |
-
-```
-Confusion Matrix:     Predicted
-                    Normal  Dysfunction
-Actual  Normal       4884      279
-        Dysfunction   501      977  ← Best performer!
-```
+| **ROC-AUC** | **0.92** ✅ |
+| **Macro-F1** | **0.82** ✅ |
+| **Accuracy** | 88.3% |
 
 ---
 
@@ -261,7 +255,7 @@ Actual  Normal       4884      279
 | Task | ROC-AUC | Macro-F1 | Verdict |
 |------|---------|----------|---------|
 | ❤️ Heart | 0.83 | 0.67 | ✅ Good |
-| 🍬 Metabolic | 0.97* | 0.72 | ✅ Excellent (waist) |
+| 🍬 Metabolic | 0.97* | 0.72 | ✅ Excellent |
 | 🫘 Kidney | - | 0.50 | ⚠️ Needs work |
 | 🫀 Liver | **0.92** | **0.82** | ✅ Best |
 
@@ -269,20 +263,4 @@ Actual  Normal       4884      279
 
 ---
 
-# Key Metrics Explained
-
-| Metric | What It Means | Our Goal |
-|--------|---------------|----------|
-| **ROC-AUC** | Can model rank sick vs healthy? | > 0.75 ✅ |
-| **Recall** | Of all sick people, how many caught? | > 50% ✅ |
-| **Macro-F1** | Balance across all classes | > 0.60 ✅ |
-
----
-
 # Thank You!
-
-**Files to explore:**
-- `2. EDA/` - All 7 analysis notebooks
-- `3. Model/05_evaluate.py` - Evaluation code
-- `3. Model/MODEL_EVALUATION_REPORT.md` - Full results
-
