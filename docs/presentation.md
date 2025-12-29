@@ -28,7 +28,7 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 ```
             Step 1: ETL          Step 2: EDA          Step 3: MODEL
 
-               📥                   🔍                   🤖
+                📥                   🔍                   🤖
 ```
 
 ---
@@ -59,7 +59,7 @@ Kidney, Liver Tests                                       🫘 Kidney Risk: 12%
 - **Linear** - Weighted sum of inputs (learning)
 - **BatchNorm** - Rescales numbers to average=0, spread=1 (stability)
 - **LeakyReLU** - Keeps positives, scales negatives to 10% (non-linearity)
-- **Dropout** - Randomly turns off 20% of neurons during training (prevent overfitting)
+- **Dropout** - Randomly turns off 5% of neurons during training (prevent overfitting)
 
 ---
 
