@@ -51,13 +51,13 @@ This project implements a **Multi-Task Learning (MTL)** neural network that pred
 The model uses **hard parameter sharing** where a shared encoder learns cross-organ correlations, while task-specific heads specialize for each clinical outcome.
 
 ```
-             Input: 29 Biomarkers
+             Input: 30 Biomarkers
                      │
                 BatchNorm1d
                      │
         ┌─────────────────────────────┐
         │   Shared Backbone           │
-        │   512 → 256 → 256           │
+        │   1024 → 768 → 512          │
         │   LeakyReLU(0.1) + BN + DO  │
         └─────────────────────────────┘
                      │
