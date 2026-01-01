@@ -38,7 +38,7 @@ Input: 30 continuous biomarkers
   Loss     Loss    BCE      Loss
 ```
 
-**Total Parameters:** ~500K (optimized architecture)
+**Total Parameters:** ~1.22M (1,221,957 trainable)
 
 ---
 

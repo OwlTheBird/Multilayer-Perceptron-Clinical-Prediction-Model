@@ -26,7 +26,7 @@ This project implements a **Multi-Task Learning (MTL)** neural network that pred
 | **Population** | 34,097 U.S. adults (Age ≥ 20) |
 | **Input Features** | 29 biomarkers |
 | **Output Tasks** | 4 clinical heads (9 total predictions) |
-| **Model Architecture** | SharedBottomMTL (217K parameters) |
+| **Model Architecture** | SharedBottomMTL (1.22M parameters) |
 
 ---
 
@@ -44,7 +44,7 @@ This project implements a **Multi-Task Learning (MTL)** neural network that pred
 
 ## 🏗️ Architecture
 
-![MTL Architecture](MTL_ARCH_Visualization.png)
+![MTL Architecture](MTL_architecture_Visualization2.png)
 
 ### Shared-Bottom Multi-Task Learning
 
