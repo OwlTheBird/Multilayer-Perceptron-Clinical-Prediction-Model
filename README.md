@@ -179,25 +179,39 @@ flowchart LR
 ```
 NHANES-MTL/
 ├── 1. ETL/
-│   ├── 01_ingestion.py          # NHANES → SQLite
-│   ├── 02_harmonization.py      # Clinical thresholds
-│   ├── 03_transformation.py     # MICE + stratification
-│   └── ELT_Config.json          # Externalized bounds
+│   ├── 01_ingestion.py          # NHANES .xpt → SQLite
+│   ├── 02_harmonization.py      # Clinical thresholds & target creation
+│   ├── 03_transformation.py     # MICE imputation + stratified split
+│   ├── ELT_Config.json          # Externalized bounds & column mapping
+│   └── Raw Data/                # NHANES .xpt files (70 files)
 │
 ├── 2. EDA/
-│   ├── 01-07 notebooks          # Feature analysis
+│   ├── 01-07_*.ipynb            # Feature analysis notebooks
 │   └── Summary.md               # Class imbalance report
 │
 ├── 3. Model/
-│   ├── 01_config.py             # Hyperparameters
-│   ├── 02_dataset.py            # Masked DataLoader
-│   ├── 03_model.py              # SharedBottomMTL
-│   ├── 04_train.py              # Uncertainty weighting
-│   ├── 05_evaluate.py           # Per-class metrics
-│   ├── 07_streamlit_app.py      # Web interface
+│   ├── config.json              # Active hyperparameters
+│   ├── 02_dataset.py            # Masked DataLoader with Three-State Logic
+│   ├── 03_model.py              # SharedBottomMTL (1.22M params)
+│   ├── 04_train.py              # Uncertainty weighting + ONNX export
+│   ├── 05_evaluate.py           # Per-class metrics & threshold tuning
 │   ├── trained_model.pth        # PyTorch checkpoint
-│   └── trained_model.onnx       # Production export
+│   └── trained_model.onnx       # Production ONNX export
 │
+├── backend/
+│   ├── main.py                  # FastAPI endpoints for inference
+│   └── requirements.txt         # Python dependencies
+│
+├── frontend/
+│   ├── src/App.jsx              # React UI with biomarker sliders
+│   └── vite.config.js           # Vite build configuration
+│
+├── databases/
+│   ├── nhanes_1st.db            # Raw staging database
+│   └── ML_data.db               # ML-ready train/test splits
+│
+├── Classification Model/        # Standalone kidney classifier baseline
+├── Regression Neural Network/   # ACR regression baseline
 └── docs/                        # Technical documentation
 ```
 
@@ -210,7 +224,11 @@ NHANES-MTL/
 git clone https://github.com/OwlTheBird/Multilayer-Perceptron-Clinical-Prediction-Model.git
 cd Multilayer-Perceptron-Clinical-Prediction-Model
 
-pip install torch numpy pandas scikit-learn streamlit onnx
+# Backend dependencies
+pip install -r backend/requirements.txt
+
+# Frontend dependencies
+cd frontend && npm install && cd ..
 ```
 
 ### Training
@@ -224,10 +242,18 @@ python 04_train.py
 python 05_evaluate.py
 ```
 
-### Web Interface
+### Running the Application
 ```bash
-streamlit run 07_streamlit_app.py
+# Terminal 1: Start FastAPI backend
+cd backend
+uvicorn main:app --reload --port 8000
+
+# Terminal 2: Start React frontend
+cd frontend
+npm run dev
 ```
+
+Access the app at `http://localhost:5173`
 
 ---
 
@@ -237,16 +263,19 @@ streamlit run 07_streamlit_app.py
 
 | Parameter | Value | Rationale |
 |-----------|-------|-----------|
-| **Epochs** | 20 | Early stopping not needed with Cosine Annealing |
-| **Batch Size** | 128 | Balance between gradient stability and speed |
-| **Learning Rate** | 1e-3 | Standard for Adam with warm restarts |
-| **Weight Decay** | 1e-4 | L2 regularization for multicollinearity |
+| **Epochs** | 20 | Sufficient with Cosine Annealing warm restarts |
+| **Batch Size** | 128 | Balance between gradient stability and GPU efficiency |
+| **Learning Rate** | 2.4e-4 | Optimized via Optuna HPO |
+| **Weight Decay** | 4.2e-4 | L2 regularization for multicollinearity |
+| **Hidden Dim** | 512 | Backbone final layer dimension |
+| **Dropout** | 0.05 | Light regularization to prevent overfitting |
+| **Focal Gamma** | 1.0 | Focus on hard examples for imbalanced classes |
 | **Scheduler** | CosineAnnealingWarmRestarts | T_0=10, T_mult=2, helps escape plateaus |
 | **Gradient Clipping** | max_norm=1.0 | Prevents explosion from high pos_weights |
 
 ### Training Features
 
-- **Focal Loss** (γ=2.0) for CVD and Liver - down-weights easy negatives
+- **Focal Loss** (γ=1.0) for CVD and Liver - down-weights easy negatives
 - **Masked Loss** - NaN targets contribute zero gradient
 - **Uncertainty Weighting** - learns task importance automatically
 - **Early gradient clipping** - stabilizes training with aggressive class weights
@@ -305,15 +334,17 @@ OPTIMAL_THRESHOLDS = {
 }
 
 # Kidney ordinal weights (for rare class detection)
-KIDNEY_WEIGHTS = [4.5, 30.0]  # [ACR≥30, ACR≥300]
+KIDNEY_WEIGHTS = [4.5, 5.0]  # [ACR≥30, ACR≥300]
 
-# Training hyperparameters
+# Training hyperparameters (Optuna-optimized)
 HYPERPARAMETERS = {
     'batch_size': 128,
-    'learning_rate': 1e-3,
+    'learning_rate': 0.00024,
     'epochs': 20,
-    'weight_decay': 1e-4,
-    'hidden_dim': 256
+    'weight_decay': 0.00042,
+    'hidden_dim': 512,
+    'dropout_rate': 0.05,
+    'focal_gamma': 1.0
 }
 ```
 
